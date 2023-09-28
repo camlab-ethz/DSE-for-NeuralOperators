@@ -1,6 +1,3 @@
-"""
-@author: 
-"""
 
 """
 This is the main file for training any model on the chosen experiment.
@@ -10,14 +7,12 @@ import torch
 import numpy as np
 import time
 import copy
+import matplotlib.pyplot as plt
+import importlib
 
-import sys
-sys.path.append('../')
 from _Utilities.Adam import Adam
 from _Utilities.utilities import count_params, percentage_difference
 
-import matplotlib.pyplot as plt
-import importlib
 
 
 ################################################################
@@ -25,7 +20,7 @@ import importlib
 ################################################################
 # TODO: Just give all possible options in comments for the config.
 configs = {
-    'model':                'ffno_smm',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
+    'model':                'fno_smm',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
     'experiment':           'Elasticity',               # Burgers, Elasticity, ShearLayer   
     # 'num_train':            1000,
     # 'num_test':             20,
@@ -58,11 +53,7 @@ configs = {
     'uniform':          100,                        # Number of points uniform along interface
     'growth':           1.0,                        # Growth factor, how quickly do points become sparse
     'ShearLayer_SMM':   False,                      # Decides what type of data to return
-
-
-
 }
-
 
 
 def train (configs):

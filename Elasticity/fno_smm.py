@@ -121,6 +121,11 @@ class FNO_SMM (nn.Module):
         self.modes2 = configs['modes2']
         self.width = configs['width']
         self.padding = 2 # pad the domain if input is non-periodic
+
+        # Predictions are normalized, we need the output denormalized
+        self.denormalizer = configs['denormalizer']
+
+        
         self.fc0 = nn.Linear(2, self.width)
         # input channel is 12: the solution of the previous 10 timesteps + 2 locations (u(t-10, x, y), ..., u(t-1, x, y),  x, y)
 
@@ -177,5 +182,7 @@ class FNO_SMM (nn.Module):
         x = self.fc1(x)
         x = F.gelu(x)
         x = self.fc2(x)
+
+        x = self.denormalizer(x) 
         return x
     
