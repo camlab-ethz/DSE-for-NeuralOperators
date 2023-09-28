@@ -25,7 +25,7 @@ import importlib
 ################################################################
 # TODO: Just give all possible options in comments for the config.
 configs = {
-    'model':                'ufno_smm',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
+    'model':                'ffno_smm',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
     'experiment':           'Elasticity',               # Burgers, Elasticity, ShearLayer   
     # 'num_train':            1000,
     # 'num_test':             20,
