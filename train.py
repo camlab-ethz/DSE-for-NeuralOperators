@@ -158,9 +158,11 @@ def train (configs):
         train_loss = 0
         model.train()
         for inputs, targets in train_loader:
-            breakpoint()
-            batch_size = inputs.shape[0]
-            inputs = inputs.to(device)
+            batch_size = targets.shape[0]
+            if isinstance(inputs, list):
+                inputs = [x.to(device) for x in inputs]
+            else:
+                inputs = inputs.to(device)
             targets = targets.to(device)
 
             predictions = model(inputs)
@@ -190,8 +192,11 @@ def train (configs):
 
             model.eval()
             for idx, (inputs, targets) in enumerate(test_loader):
-                batch_size = inputs.shape[0]
-                inputs = inputs.to(device)
+                batch_size = targets.shape[0]
+                if isinstance(inputs, list):
+                    inputs = [x.to(device) for x in inputs]
+                else:
+                    inputs = inputs.to(device)
                 targets = targets.to(device)
 
                 predictions = model(inputs)
