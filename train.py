@@ -20,7 +20,7 @@ from _Utilities.utilities import count_params, percentage_difference
 ################################################################
 # TODO: Just give all possible options in comments for the config.
 configs = {
-    'model':                'ufno',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
+    'model':                'fno_smm',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
     'experiment':           'Humidity',               # Burgers, Elasticity, Airfoil, ShearLayer, Humidity
     # 'num_train':            1000,
     # 'num_test':             20,
@@ -226,21 +226,27 @@ def train (configs):
 
                 predictions = model(inputs)
 
+                # For different growth factors and sparse data in Humidity, we only consider a small domain.
+                if configs['experiment'] == 'Humidity' and configs['growth'] != 1.0:
+                    l, r, b, t = test_loader.crop
+                    predictions = predictions[:, b:t, l:r,:]
+                    targets = targets[:, b:t, l:r,:]
+
                 # Compute loss separate for complex numbers
                 if predictions.is_complex():
                     loss = (
-                        loss_fn(predictions.real.view(batch_size, -1), targets.real.view(batch_size, -1)) 
-                        + loss_fn(predictions.imag.view(batch_size, -1), targets.imag.view(batch_size, -1))
+                        loss_fn(predictions.real.reshape(batch_size, -1), targets.real.reshape(batch_size, -1)) 
+                        + loss_fn(predictions.imag.reshape(batch_size, -1), targets.imag.reshape(batch_size, -1))
                     )
                     # For metrics we only consider REAL parts
                     predictions = predictions.real
                     targets = targets.real
                 else:
-                    loss = loss_fn(predictions.view(batch_size, -1), targets.view(batch_size, -1))
+                    loss = loss_fn(predictions.reshape(batch_size, -1), targets.reshape(batch_size, -1))
                 test_loss += loss.item()
 
-                relative_error += percentage_difference(targets.view(batch_size, -1), predictions.view(batch_size, -1))
-                median_error[idx] = percentage_difference(targets.view(batch_size, -1), predictions.view(batch_size, -1))
+                relative_error += percentage_difference(targets.reshape(batch_size, -1), predictions.reshape(batch_size, -1))
+                median_error[idx] = percentage_difference(targets.reshape(batch_size, -1), predictions.reshape(batch_size, -1))
 
         test_loss /= configs['num_test']
         relative_error /= configs['num_test']

@@ -67,8 +67,8 @@ class U_net (nn.Module):
 class UFNO (nn.Module):
     # Set a class attribute for the default configs.
     configs = {
-        'num_train':            18*1,#0,
-        'num_test':             18*1,#0,
+        'num_train':            18*50,
+        'num_test':             18*10,
         'batch_size':           30, 
         'epochs':               101,
         'test_epochs':          10,

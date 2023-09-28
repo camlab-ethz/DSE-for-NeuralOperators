@@ -50,8 +50,8 @@ def getDataloaders (configs):
         t = nbelow+uniform
 
         # Testing will always be performed on a smaller region
-        test_in = test_in[:, b:t, l:r,:]
-        test_out = test_out[:, b:t, l:r,:]
+        # test_in = test_in[:, b:t, l:r,:]
+        # test_out = test_out[:, b:t, l:r,:]
 
 
     # create data loaders
@@ -60,6 +60,7 @@ def getDataloaders (configs):
 
     ### Used for irregularly spaced data
     train_loader.point_data = [x_pos, y_pos]    # TODO: Ugly.
+    test_loader.crop = [l,r,b,t]
 
     return train_loader, test_loader
 
