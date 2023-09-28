@@ -23,9 +23,10 @@ import importlib
 ################################################################
 # configs
 ################################################################
+# TODO: Just give all possible options in comments for the config.
 configs = {
-    'model':                'fno',
-    'experiment':           'Burgers',
+    'model':                'fno',                  # Model to train - fno, fno_smm, ffno, ffno_smm, ufno, ufno_smm
+    'experiment':           'Elasticity',           # Burgers, Elasticity        
     # 'num_train':            1000,
     # 'num_test':             200,
     # 'batch_size':           20, 
@@ -76,6 +77,12 @@ def train (configs):
             Model = importlib.import_module(configs['experiment']+'.architectures').FNO_SMM
         elif configs['model'].lower() == 'ffno':
             Model = importlib.import_module(configs['experiment']+'.architectures').FFNO
+        elif configs['model'].lower() == 'ffno_smm':
+            Model = importlib.import_module(configs['experiment']+'.architectures').FFNO_SMM
+        elif configs['model'].lower() == 'ufno':
+            Model = importlib.import_module(configs['experiment']+'.architectures').UFNO
+        elif configs['model'].lower() == 'ufno_smm':
+            Model = importlib.import_module(configs['experiment']+'.architectures').UFNO_SMM
         else:
             raise ValueError('Model not recognized.')
         
@@ -101,7 +108,7 @@ def train (configs):
 
     train_loader, test_loader = getDataloaders(configs)
     ### TODO TEMPORARY, unlikely good idea to put point dataset into dictionary
-    configs['point_data'] = train_loader.point_data
+    configs['point_data'] = None if not hasattr(train_loader, "point_data") else train_loader.point_data
     
     print(f'Processing finished in {time.time()-start_time:.2f}s.')
 
@@ -140,6 +147,7 @@ def train (configs):
         train_loss = 0
         model.train()
         for inputs, targets in train_loader:
+            breakpoint()
             batch_size = inputs.shape[0]
             inputs = inputs.to(device)
             targets = targets.to(device)

@@ -13,14 +13,10 @@ class SpectralConv1d (nn.Module):
     def __init__(self, in_channels, out_channels, modes, transform=None):
         super(SpectralConv1d, self).__init__()
 
-        """
-        1D Fourier layer. It does VFFT, linear transform, and Inverse VFFT.    
-        """
-
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.modes = modes  #Number of Fourier modes to multiply, at most floor(N/2) + 1
-        self.transform = transform  # TODO: describe this
+        self.transform = transform
 
         self.scale = (1 / (in_channels*out_channels))
         self.weights = nn.Parameter(self.scale * torch.rand(in_channels, out_channels, self.modes, dtype=torch.cfloat))
@@ -69,7 +65,7 @@ class FNO (nn.Module):
         'epochs':               501,
         'test_epochs':          10,
 
-        'datapath':             "_Data/burgers/",  # Path to data
+        'datapath':             "_Data/Burgers/",  # Path to data
 
         # Training specific parameters
         'learning_rate':        0.005,
@@ -199,10 +195,10 @@ class FNO_SMM (nn.Module):
         'num_train':            1000,
         'num_test':             200,
         'batch_size':           50, 
-        'epochs':               101,
+        'epochs':               501,
         'test_epochs':          10,
 
-        'datapath':             "_Data/burgers/",  # Path to data
+        'datapath':             "_Data/Burgers/",  # Path to data
 
         # Training specific parameters
         'learning_rate':        0.005,
@@ -213,7 +209,7 @@ class FNO_SMM (nn.Module):
 
         # Model specific parameters
         'modes':                16,                     # Number of modes to use in the Fourier layer
-        'width':                20,                     # Number of channels in the convolutional layers
+        'width':                64,                     # Number of channels in the convolutional layers
     }
 
     def __init__(self, configs):
