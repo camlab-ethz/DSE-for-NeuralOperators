@@ -25,10 +25,10 @@ import importlib
 ################################################################
 # TODO: Just give all possible options in comments for the config.
 configs = {
-    'model':                'geo_ufno',                  # Model to train - fno, fno_smm, ffno, ffno_smm, ufno, ufno_smm
-    'experiment':           'Elasticity',           # Burgers, Elasticity        
-    # 'num_train':            1000,
-    # 'num_test':             200,
+    'model':                'fno',                  # Model to train - fno, fno_smm, ffno, ffno_smm, ufno, ufno_smm
+    'experiment':           'ShearLayer',           # Burgers, Elasticity        
+    'num_train':            1,
+    'num_test':             0,
     # 'batch_size':           20, 
     # 'epochs':               10001,
     # 'test_epochs':          10,
@@ -51,6 +51,16 @@ configs = {
 
     # Specifically for Burgers
     'data_dist':            'uniform',              # Data distribution to use - uniform, cubic_from_conexp, random
+
+    # Specifically for Shear Layer
+    'center_1':         256,                        # Center of top interface
+    'center_2':         768,                        # Center of bottom interface
+    'uniform':          100,                        # Number of points uniform along interface
+    'growth':           1.0,                        # Growth factor, how quickly do points become sparse
+    'ShearLayer_SMM':   False,                      # Decides what type of data to return
+
+
+
 }
 
 
@@ -106,7 +116,8 @@ def train (configs):
     ### Load Dataset
     try:
         getDataloaders = importlib.import_module(configs['experiment']+'.dataset').getDataloaders
-    except:
+    except Exception as error:
+        print(error)
         raise ValueError('Experiment not recognized.')
     
     
