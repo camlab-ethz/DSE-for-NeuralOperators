@@ -66,6 +66,7 @@ class FNO (nn.Module):
         'test_epochs':          10,
 
         'datapath':             "_Data/Burgers/",  # Path to data
+        'data_dist':            'cubic_from_conexp',              # Data distribution to use - uniform, cubic_from_conexp, random
 
         # Training specific parameters
         'learning_rate':        0.005,

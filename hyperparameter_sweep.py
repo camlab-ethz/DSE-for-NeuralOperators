@@ -2,6 +2,7 @@
 
 
 from train import train
+import torch
 import numpy as np
 
 
@@ -12,7 +13,7 @@ configs = {
     'model':                'fno',
     'experiment':           'Burgers',
     # 'num_train':            1000,
-    # 'num_test':             200,
+    # 'num_test':             20,
     # 'batch_size':           20, 
     # 'epochs':               10001,
     # 'test_epochs':          10,
@@ -26,15 +27,27 @@ configs = {
     'display_predictions':  False,
     'save_model':           True,
     'load_model':           False,
-    'model_path':           'Models/model.pt',      # Path to model file if loading model
+    'model_path':           '_Models/model.pt',      # Path to model file if loading model
     'min_max_norm':         False,
+    # 'data_small_domain':    True,              # Whether to use a small domain or not for specifically the Airfoil experiment
 
-
-    'loss_fn':              'L1',                   # Loss function to use - L1, L2
-    #'datapath':             '/hdd/mmichelis/VNO_data/elasticity/',  # Path to data
+    'device':               torch.device('cuda'),     # Define device for training & inference - GPU/CPU
+    # 'iphi_loss_reg':        0.0,                    # Regularization parameter for IPHI loss term
+    # 'loss_fn':              'L1',                   # Loss function to use - L1, L2
+    # 'datapath':             '_Data/Elasticity/',    # Path to data
 
     # Specifically for Burgers
-    'data_dist':            'uniform',              # Data distribution to use - uniform, cubic_from_conexp, random
+    # 'data_dist':            'uniform',              # Data distribution to use - uniform, cubic_from_conexp, random
+
+    # Specifically for Shear Layer
+    # 'center_1':         256,                        # Center of top interface
+    # 'center_2':         768,                        # Center of bottom interface
+    # 'uniform':          100,                        # Number of points uniform along interface
+    # 'growth':           1.0,                        # Growth factor, how quickly do points become sparse
+
+    # Specifically for Humidity
+    # 'center_lat':       180,                        # Lattitude center of the nonuniform sampling region
+    # 'center_lon':       140,                        # Longitude center of the nonuniform sampling region
 }
 
 
@@ -48,7 +61,7 @@ if __name__ == "__main__":
     scheduler_gammas    = [0.99, 0.9]
 
 
-    log = open(f"Models/grid_search_{configs['model']}_{configs['experiment']}.txt", 'w')
+    log = open(f"_Models/grid_search_{configs['model']}_{configs['experiment']}.txt", 'w')
     log.write(f"--- Grid Search for {configs['model']} using {configs['experiment']} Data ---\n\n")
 
     for lr in learning_rates:
