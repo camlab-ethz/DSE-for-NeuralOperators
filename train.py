@@ -25,7 +25,7 @@ import importlib
 ################################################################
 # TODO: Just give all possible options in comments for the config.
 configs = {
-    'model':                'fno',                  # Model to train - fno, fno_smm, ffno, ffno_smm, ufno, ufno_smm
+    'model':                'geo_ufno',                  # Model to train - fno, fno_smm, ffno, ffno_smm, ufno, ufno_smm
     'experiment':           'Elasticity',           # Burgers, Elasticity        
     # 'num_train':            1000,
     # 'num_test':             200,
@@ -71,16 +71,27 @@ def train (configs):
     
     ### Load Model
     try:
+        ### Regular Grids
         if configs['model'].lower() == 'fno':
             Model = importlib.import_module(configs['experiment']+'.architectures').FNO
-        elif configs['model'].lower() == 'fno_smm':
-            Model = importlib.import_module(configs['experiment']+'.architectures').FNO_SMM
         elif configs['model'].lower() == 'ffno':
             Model = importlib.import_module(configs['experiment']+'.architectures').FFNO
-        elif configs['model'].lower() == 'ffno_smm':
-            Model = importlib.import_module(configs['experiment']+'.architectures').FFNO_SMM
         elif configs['model'].lower() == 'ufno':
             Model = importlib.import_module(configs['experiment']+'.architectures').UFNO
+
+        ### Irregular Grids
+        elif configs['model'].lower() == 'geo_fno':
+            Model = importlib.import_module(configs['experiment']+'.architectures').Geo_FNO
+        elif configs['model'].lower() == 'geo_ffno':
+            Model = importlib.import_module(configs['experiment']+'.architectures').Geo_FFNO
+        elif configs['model'].lower() == 'geo_ufno':
+            Model = importlib.import_module(configs['experiment']+'.architectures').Geo_UFNO
+
+        ### Structured Matrix Method
+        elif configs['model'].lower() == 'fno_smm':
+            Model = importlib.import_module(configs['experiment']+'.architectures').FNO_SMM
+        elif configs['model'].lower() == 'ffno_smm':
+            Model = importlib.import_module(configs['experiment']+'.architectures').FFNO_SMM
         elif configs['model'].lower() == 'ufno_smm':
             Model = importlib.import_module(configs['experiment']+'.architectures').UFNO_SMM
         else:
