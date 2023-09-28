@@ -24,7 +24,7 @@ import importlib
 # configs
 ################################################################
 configs = {
-    'model':                'fno',
+    'model':                'fno_smm',
     'experiment':           'Burgers',
     # 'num_train':            1000,
     # 'num_test':             200,
@@ -72,6 +72,8 @@ def train (configs):
     try:
         if configs['model'].lower() == 'fno':
             Model = importlib.import_module(configs['experiment']+'.architectures').FNO
+        elif configs['model'].lower() == 'fno_smm':
+            Model = importlib.import_module(configs['experiment']+'.architectures').FNO_SMM
         elif configs['model'].lower() == 'ffno':
             Model = importlib.import_module(configs['experiment']+'.architectures').FFNO
         else:
@@ -88,6 +90,20 @@ def train (configs):
         getDataloaders = importlib.import_module(configs['experiment']+'.dataset').getDataloaders
     except:
         raise ValueError('Experiment not recognized.')
+    
+    
+
+    ##############
+    # data loaders
+    ##############
+    start_time = time.time()
+    print(f'Loading and processing data.')
+
+    train_loader, test_loader = getDataloaders(configs)
+    ### TODO TEMPORARY, unlikely good idea to put point dataset into dictionary
+    configs['point_data'] = train_loader.point_data
+    
+    print(f'Processing finished in {time.time()-start_time:.2f}s.')
 
     
     #######
@@ -99,7 +115,6 @@ def train (configs):
     else:
         model = Model(configs).to(device)
     
-
     print(f"Number of trainable parameters: {count_params(model)}")
     optimizer = Adam(model.parameters(), lr=configs['learning_rate'], weight_decay=configs['weight_decay'])
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=configs['scheduler_step'], gamma=configs['scheduler_gamma'])
@@ -111,18 +126,6 @@ def train (configs):
     else:
         raise ValueError('Loss function not recognized.')
 
-
-    ##############
-    # data loaders
-    ##############
-    start_time = time.time()
-    print(f'Loading and processing data.')
-
-    train_loader, test_loader = getDataloaders(configs)
-    ### TODO TEMPORARY
-    model.point_data = train_loader.point_data
-    
-    print(f'Processing finished in {time.time()-start_time:.2f}s.')
     
     ##########
     # training
