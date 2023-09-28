@@ -68,7 +68,7 @@ class FNO (nn.Module):
         'epochs':               101,
         'test_epochs':          10,
 
-        'datapath':             "../../data/burgers/",  # Path to data
+        'datapath':             "Data/burgers/",  # Path to data
 
         # Training specific parameters
         'learning_rate':        0.005,
