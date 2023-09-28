@@ -13,8 +13,8 @@ import copy
 
 import sys
 sys.path.append('../')
-from Utilities._Adam import Adam
-from Utilities._utilities import count_params, percentage_difference
+from _Utilities.Adam import Adam
+from _Utilities.utilities import count_params, percentage_difference
 
 import matplotlib.pyplot as plt
 import importlib
@@ -24,7 +24,7 @@ import importlib
 # configs
 ################################################################
 configs = {
-    'model':                'fno_smm',
+    'model':                'fno',
     'experiment':           'Burgers',
     # 'num_train':            1000,
     # 'num_test':             200,
@@ -41,11 +41,11 @@ configs = {
     'display_predictions':  False,
     'save_model':           True,
     'load_model':           False,
-    'model_path':           'Models/model.pt',      # Path to model file if loading model
+    'model_path':           '_Models/model.pt',      # Path to model file if loading model
     'min_max_norm':         False,
 
 
-    'loss_fn':              'L1',                   # Loss function to use - L1, L2
+    'loss_fn':              'L2',                   # Loss function to use - L1, L2
     #'datapath':             '/hdd/mmichelis/VNO_data/elasticity/',  # Path to data
 
     # Specifically for Burgers
@@ -180,8 +180,8 @@ def train (configs):
                 loss = loss_fn(predictions.view(batch_size, -1), targets.view(batch_size, -1))
                 test_loss += loss.item()
 
-                relative_error += percentage_difference(targets, predictions)
-                median_error[idx] = percentage_difference(targets, predictions)
+                relative_error += percentage_difference(targets.view(batch_size, -1), predictions.view(batch_size, -1))
+                median_error[idx] = percentage_difference(targets.view(batch_size, -1), predictions.view(batch_size, -1))
 
         test_loss /= configs['num_test']
         relative_error /= configs['num_test']
@@ -208,13 +208,13 @@ def train (configs):
     plt.ylabel('Log Loss')
     plt.legend()
     plt.grid()
-    plt.savefig(f"./Models/loss_history.png")
+    plt.savefig(f"_Models/loss_history.png")
     plt.close()
 
     # Save Model
     if configs['save_model']:
         print(f"Experiment: {configs['experiment']} \t- Model: {configs['model']} \t- Error: {lowest_error:.2f}%")
-        torch.save(best_model, f"Models/{configs['experiment']}_{configs['model']}.pt")
+        torch.save(best_model, f"_Models/{configs['experiment']}_{configs['model']}.pt")
 
     return training_times, train_loss_hist, test_loss_hist, relative_error_hist, relative_median_error_hist
 

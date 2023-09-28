@@ -10,7 +10,7 @@ import numpy as np
 #  1d fourier layer
 ################################################################
 class SpectralConv1d (nn.Module):
-    def __init__(self, in_channels, out_channels, modes1, transform=None):
+    def __init__(self, in_channels, out_channels, modes, transform=None):
         super(SpectralConv1d, self).__init__()
 
         """
@@ -19,11 +19,11 @@ class SpectralConv1d (nn.Module):
 
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.modes1 = modes1  #Number of Fourier modes to multiply, at most floor(N/2) + 1
+        self.modes = modes  #Number of Fourier modes to multiply, at most floor(N/2) + 1
         self.transform = transform  # TODO: describe this
 
         self.scale = (1 / (in_channels*out_channels))
-        self.weights1 = nn.Parameter(self.scale * torch.rand(in_channels, out_channels, self.modes1, dtype=torch.cfloat))
+        self.weights = nn.Parameter(self.scale * torch.rand(in_channels, out_channels, self.modes, dtype=torch.cfloat))
 
 
     # Complex multiplication and complex batched multiplications
@@ -35,14 +35,14 @@ class SpectralConv1d (nn.Module):
         if self.transform is not None:
             # FNO SMM
             x_ft = self.transform.forward(x.cfloat())
-            out_ft = self.compl_mul1d(x_ft, self.weights1)
+            out_ft = self.compl_mul1d(x_ft, self.weights)
             x = self.transform.inverse(out_ft).real / x.size(-1) * 2
         else:
             # standard FNO
             batchsize = x.shape[0]
             x_ft = torch.fft.rfft(x)
             out_ft = torch.zeros(batchsize, self.out_channels, x.size(-1)//2 + 1,  device=x.device, dtype=torch.cfloat)
-            out_ft[:, :, :self.modes1] = self.compl_mul1d(x_ft[:, :, :self.modes1], self.weights1)
+            out_ft[:, :, :self.modes] = self.compl_mul1d(x_ft[:, :, :self.modes], self.weights)
             x = torch.fft.irfft(out_ft, n=x.size(-1))
 
         return x
@@ -66,10 +66,10 @@ class FNO (nn.Module):
         'num_train':            1000,
         'num_test':             200,
         'batch_size':           50, 
-        'epochs':               101,
+        'epochs':               501,
         'test_epochs':          10,
 
-        'datapath':             "Data/burgers/",  # Path to data
+        'datapath':             "_Data/burgers/",  # Path to data
 
         # Training specific parameters
         'learning_rate':        0.005,
@@ -80,13 +80,13 @@ class FNO (nn.Module):
 
         # Model specific parameters
         'modes':                16,                     # Number of modes to use in the Fourier layer
-        'width':                20,                     # Number of channels in the convolutional layers
+        'width':                64,                     # Number of channels in the convolutional layers
     }
 
     def __init__(self, configs):
         super(FNO, self).__init__()
 
-        self.modes1 = configs['modes']
+        self.modes = configs['modes']
         self.width = configs['width']
         self.padding = 2 # pad the domain if input is non-periodic
         self.point_data = configs['point_data']
@@ -94,10 +94,10 @@ class FNO (nn.Module):
         # Define network
         self.fc0 = nn.Linear(2, self.width) # input channel is 2: (a(x), x)
 
-        self.conv0 = SpectralConv1d(self.width, self.width, self.modes1)
-        self.conv1 = SpectralConv1d(self.width, self.width, self.modes1)
-        self.conv2 = SpectralConv1d(self.width, self.width, self.modes1)
-        self.conv3 = SpectralConv1d(self.width, self.width, self.modes1)
+        self.conv0 = SpectralConv1d(self.width, self.width, self.modes)
+        self.conv1 = SpectralConv1d(self.width, self.width, self.modes)
+        self.conv2 = SpectralConv1d(self.width, self.width, self.modes)
+        self.conv3 = SpectralConv1d(self.width, self.width, self.modes)
         self.w0 = nn.Conv1d(self.width, self.width, 1)
         self.w1 = nn.Conv1d(self.width, self.width, 1)
         self.w2 = nn.Conv1d(self.width, self.width, 1)
@@ -154,11 +154,10 @@ class FNO (nn.Module):
 ################################################################
 
 # class for 1-dimensional Fourier transforms on nonequispaced data, using the adjoint as an approximate inverse
-# TODO: Is this naming appropriate
 class VandermondeTransform:
     def __init__(self, positions, modes):
         self.modes = modes
-        self.positions = positions / (8192) * 2 * np.pi         # TODO: Hardcoded 8192
+        self.positions = positions / (8192) * 2 * np.pi
         self.l = positions.shape[0]
 
         self.Vt, self.Vc = self.make_matrix()
@@ -203,7 +202,7 @@ class FNO_SMM (nn.Module):
         'epochs':               101,
         'test_epochs':          10,
 
-        'datapath':             "Data/burgers/",  # Path to data
+        'datapath':             "_Data/burgers/",  # Path to data
 
         # Training specific parameters
         'learning_rate':        0.005,
@@ -220,21 +219,21 @@ class FNO_SMM (nn.Module):
     def __init__(self, configs):
         super(FNO_SMM, self).__init__()
 
-        self.modes1 = configs['modes']
+        self.modes = configs['modes']
         self.width = configs['width']
         self.padding = 2 # pad the domain if input is non-periodic
         self.point_data = configs['point_data']
 
         # Define Structured Matrix Method
-        transform = VandermondeTransform(self.point_data.squeeze(), self.modes1)
+        transform = VandermondeTransform(self.point_data.squeeze(), self.modes)
 
         # Define network
         self.fc0 = nn.Linear(2, self.width) # input channel is 2: (a(x), x)
 
-        self.conv0 = SpectralConv1d(self.width, self.width, self.modes1, transform=transform)
-        self.conv1 = SpectralConv1d(self.width, self.width, self.modes1, transform=transform)
-        self.conv2 = SpectralConv1d(self.width, self.width, self.modes1, transform=transform)
-        self.conv3 = SpectralConv1d(self.width, self.width, self.modes1, transform=transform)
+        self.conv0 = SpectralConv1d(self.width, self.width, self.modes, transform=transform)
+        self.conv1 = SpectralConv1d(self.width, self.width, self.modes, transform=transform)
+        self.conv2 = SpectralConv1d(self.width, self.width, self.modes, transform=transform)
+        self.conv3 = SpectralConv1d(self.width, self.width, self.modes, transform=transform)
         self.w0 = nn.Conv1d(self.width, self.width, 1)
         self.w1 = nn.Conv1d(self.width, self.width, 1)
         self.w2 = nn.Conv1d(self.width, self.width, 1)

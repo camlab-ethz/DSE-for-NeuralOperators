@@ -2,7 +2,7 @@
 
 import torch 
 
-from Utilities._utilities import MatReader, normalize
+from _Utilities.utilities import MatReader, normalize
 
 
 def getDataloaders (configs):
