@@ -7,15 +7,113 @@ import torch.nn.functional as F
 
 
 ################################################################
-#  2d fourier layer, FFNO Structured Matrix
+# FFNO_SMM
 ################################################################
-class SpectralConv2d_FFNO_SMM(nn.Module):
-    def __init__(self, in_channels, out_channels, modes1, modes2, transformer):
-        super(SpectralConv2d_FFNO_SMM, self).__init__()
 
-        """
-        2D Fourier layer. It does FFT, linear transform, and Inverse FFT.    
-        """
+# class for 2-dimensional Fourier transforms on a nonequispaced lattice of data
+class VandermondeTransform:
+    def __init__(self, x_positions, y_positions, x_modes, y_modes, device):
+        # scalte between 0 and 2 pi
+        x_positions -= torch.min(x_positions)
+        y_positions -= torch.min(y_positions)
+        self.x_positions = x_positions / (torch.max(x_positions)+1) * 2 * np.pi
+        self.y_positions = y_positions / (torch.max(y_positions)+1) * 2 * np.pi
+
+        self.x_modes = x_modes
+        self.y_modes = y_modes
+
+        self.device = device
+
+        self.x_l = x_positions.shape[0]
+        self.y_l = y_positions.shape[0]
+
+        self.Vxt, self.Vxc, self.Vyt, self.Vyc = self.make_matrix()
+
+    def make_matrix(self):
+        # given:    class variables
+        # return: the matrices required for the forward and inverse transformations
+
+        V_x = torch.zeros([self.x_modes, self.x_l], dtype=torch.cfloat).to(self.device)
+        for row in range(self.x_modes):
+             for col in range(self.x_l):
+                V_x[row, col] = torch.exp(-1j * row *  self.x_positions[col]) 
+        
+        V_x = torch.divide(V_x, np.sqrt(self.x_l))
+
+
+        V_y = torch.zeros([2 * self.y_modes, self.y_l], dtype=torch.cfloat).to(self.device)
+        for row in range(self.y_modes):
+             for col in range(self.y_l):
+                V_y[row, col] = torch.exp(-1j * row *  self.y_positions[col]) 
+                V_y[-(row+1), col] = torch.exp(-1j * (self.y_l - row - 1) *  self.y_positions[col]) 
+        V_y = torch.divide(V_y, np.sqrt(self.y_l))
+
+        return torch.transpose(V_x, 0, 1), torch.conj(V_x.clone()), torch.transpose(V_y, 0, 1), torch.conj(V_y.clone())
+
+    def forward(self, data):
+        # given:    data (in spatial domain)
+        # return:   the Fourier transformation of the data (to Fourier domain)
+
+        data_fwd = torch.transpose(
+                torch.matmul(
+                    torch.transpose(
+                        torch.matmul(data, self.Vxt)
+                    , 2, 3)
+                , self.Vyt)
+                , 2,3)
+
+        return data_fwd
+    
+    def inverse(self, data):
+        # given:    data (in Fourier domain)
+        # return:   the inverse Fourier transformation of the data (to spatial domain)
+        
+        data_inv = torch.transpose(
+                torch.matmul(
+                    torch.transpose(
+                        torch.matmul(data, self.Vxc),
+                    2, 3),
+                self.Vyc),
+                2, 3)
+        
+        return data_inv
+
+    def forward_x(self, data):
+        # given:    data in spatial domain
+        # return:   the forward transformation just along the x-axis, for FFNO
+
+        data_fwd = torch.matmul(data, self.Vxt)
+
+        return data_fwd
+
+    def inverse_x(self, data):
+        # given:    data (in Fourier domain)
+        # return:   the inverse Fourier transformation just along x-axis
+        
+        data_inv = torch.matmul(data, self.Vxc)
+        
+        return data_inv
+
+    def forward_y(self, data):
+        # given:    data in spatial domain
+        # return:   the forward transformation just along the x-axis, for FFNO
+        
+        data_fwd = torch.matmul(data, self.Vyt)
+
+        return data_fwd
+
+    def inverse_y(self, data):
+        # given:    data (in Fourier domain)
+        # return:   the inverse Fourier transformation just along x-axis
+        
+        data_inv = torch.matmul(data, self.Vyc[:self.y_modes,:])
+        
+        return data_inv
+
+
+class SpectralConv2d_SMM (nn.Module):
+    def __init__(self, in_channels, out_channels, modes1, modes2, transformer):
+        super(SpectralConv2d_SMM, self).__init__()
 
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -71,56 +169,55 @@ class SpectralConv2d_FFNO_SMM(nn.Module):
 
         return x
 
-class FFNO_SMM(nn.Module):
 
+class FFNO_SMM (nn.Module):
     # Set a class attribute for the default configs.
     configs = {
         'num_train':            896,
         'num_test':             128,
-        'batch_size':           5, 
+        'batch_size':           8, 
         'epochs':               101,
         'test_epochs':          10,
 
-        'datapath':             "_Data/ShearLayer/",  # Path to data
+        'datapath':             "_Data/ShearLayer/ddsl_1024/",    # Path to data
 
         # Training specific parameters
         'learning_rate':        0.005,
         'scheduler_step':       10,
         'scheduler_gamma':      0.97,
-        'weight_decay':         1e-5,                   # Weight decay
+        'weight_decay':         1e-4,                   # Weight decay
         'loss_fn':              'L1',                   # Loss function to use - L1, L2
 
         # Model specific parameters
-        'modes':                16,                     # Number of modes to use in the Fourier layer
+        'modes1':               20,                     # Number of x-modes to use in the Fourier layer
+        'modes2':               20,                     # Number of y-modes to use in the Fourier layer
         'width':                32,                     # Number of channels in the convolutional layers
-    }
 
-    def __init__(self, modes1, modes2, width, transformer, sparse_x, sparse_y):
+        # Dataset specific parameters
+        'center_1':         256,                        # X-center of the nonuniform sampling region
+        'center_2':         768,                        # Y-center of the nonuniform sampling region
+        'uniform':          100,                        # Width of the nonuniform sampling region
+        'growth':           1.0,                        # Growth rate of the nonuniform sampling region
+    }
+    def __init__(self, configs):
         super(FFNO_SMM, self).__init__()
-        """
-        The overall network. It contains 4 layers of the Fourier layer.
-        1. Lift the input to the desire channel dimension by self.fc0 .
-        2. 4 layers of the integral operators u' = (W + K)(u).
-            W defined by self.w; K defined by self.conv .
-        3. Project from the channel space to the output space by self.fc1 and self.fc2 .
-        
-        input: the solution of the previous 10 timesteps + 2 locations (u(t-10, x, y), ..., u(t-1, x, y),  x, y)
-        input shape: (batchsize, x=64, y=64, c=12)
-        output: the solution of the next timestep
-        output shape: (batchsize, x=64, y=64, c=1)
-        """
-        self.modes1 = modes1
-        self.modes2 = modes2
-        self.width = width
+
+        self.modes1 = configs['modes1']
+        self.modes2 = configs['modes2']
+        self.width = configs['width']
+        self.sparse_x, self.y_pos = configs['point_data']
         self.padding = 0 # pad the domain if input is non-periodic
 
+        # Define Structured Matrix Method
+        transform = VandermondeTransform(self.sparse_x, self.y_pos, self.modes1, self.modes2, configs['device'])
+
         self.fc0 = nn.Linear(3, self.width).to(torch.cfloat)
-        self.conv0 = SpectralConv2d_FFNO_SMM(self.width, self.width, self.modes1, self.modes2, transformer)
-        self.conv1 = SpectralConv2d_FFNO_SMM(self.width, self.width, self.modes1, self.modes2, transformer)
-        self.conv2 = SpectralConv2d_FFNO_SMM(self.width, self.width, self.modes1, self.modes2, transformer)
-        self.conv3 = SpectralConv2d_FFNO_SMM(self.width, self.width, self.modes1, self.modes2, transformer)
-        self.conv4 = SpectralConv2d_FFNO_SMM(self.width, self.width, self.modes1, self.modes2, transformer)
-        self.conv5 = SpectralConv2d_FFNO_SMM(self.width, self.width, self.modes1, self.modes2, transformer)
+        self.conv0 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2, transform)
+        self.conv1 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2, transform)
+        self.conv2 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2, transform)
+        self.conv3 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2, transform)
+        self.conv4 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2, transform)
+        self.conv5 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2, transform)
         
         self.w00r = nn.Conv2d(self.width, self.width, 1)
         self.w10r = nn.Conv2d(self.width, self.width, 1)

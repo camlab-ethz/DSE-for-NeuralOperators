@@ -8,11 +8,11 @@ import torch.nn.functional as F
 
 
 ################################################################
-# FFNO_SMM
+# FNO_SMM
 ################################################################
 
 # class for 2-dimensional Fourier transforms on a nonequispaced lattice of data
-class VFT:
+class VandermondeTransform:
     def __init__ (self, x_positions, y_positions, x_modes, y_modes, device):
         # scalte between 0 and 2 pi
         x_positions -= torch.min(x_positions)
@@ -126,7 +126,7 @@ class FNO_SMM (nn.Module):
         'epochs':               101,
         'test_epochs':          10,
 
-        'datapath':             "_Data/ShearLayer/",    # Path to data
+        'datapath':             "_Data/ShearLayer/ddsl_1024/",    # Path to data
 
         # Training specific parameters
         'learning_rate':        0.005,
@@ -156,7 +156,7 @@ class FNO_SMM (nn.Module):
         self.padding = 0 # pad the domain if input is non-periodic
 
         # Define Structured Matrix Method
-        transform = VFT(self.sparse_x, self.y_pos, self.modes1, self.modes2, configs['device'])
+        transform = VandermondeTransform(self.sparse_x, self.y_pos, self.modes1, self.modes2, configs['device'])
         
         # input channel is 12: the solution of the previous 10 timesteps + 2 locations (u(t-10, x, y), ..., u(t-1, x, y),  x, y)
         self.fc0 = nn.Linear(3, self.width).to(torch.cfloat)

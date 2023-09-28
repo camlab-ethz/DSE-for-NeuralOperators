@@ -20,7 +20,7 @@ from _Utilities.utilities import count_params, percentage_difference
 ################################################################
 # TODO: Just give all possible options in comments for the config.
 configs = {
-    'model':                'fno_smm',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
+    'model':                'ffno_smm',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
     'experiment':           'ShearLayer',               # Burgers, Elasticity, Airfoil, ShearLayer   
     # 'num_train':            1000,
     # 'num_test':             20,
@@ -184,7 +184,7 @@ def train (configs):
                 loss = loss_fn(predictions.view(batch_size, -1), targets.view(batch_size, -1))
 
             # For diffeomorphisms, additional loss term:
-            if hasattr(model, "model_iphi") and configs['iphi_loss_reg'] > 0:
+            if hasattr(model, "model_iphi") and ('iphi_loss_reg' in configs) and (configs['iphi_loss_reg'] > 0):
                 samples_x = torch.rand(batch_size, targets.shape[1], 2).cuda() * 3 - 1 # TODO Hardcoded values, check if applies to all
                 samples_xi = model.model_iphi(samples_x)
                 loss += configs['iphi_loss_reg'] * loss_fn(samples_xi, samples_x)

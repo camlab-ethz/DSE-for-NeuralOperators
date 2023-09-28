@@ -43,7 +43,12 @@ def getDataloaders (configs):
         sparse_x = sparsify.shear_distribution(train_a, center_points, growth, uniform)[1]
         sparse_x = sparse_x.int()
 
-    y_pos = torch.arange(1024)
+    if '1024' in configs['datapath']:
+        y_pos = torch.arange(1024)
+    elif '128' in configs['datapath']:
+        y_pos = torch.arange(128)
+    else:
+        raise ValueError("Invalid datapath. Must contain resolution of either 128 or 1024")
 
     # create data loaders
     train_loader = DataLoader(TensorDataset(train_a, train_u), batch_size=batch_size, shuffle=True)
