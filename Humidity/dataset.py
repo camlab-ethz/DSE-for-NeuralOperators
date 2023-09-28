@@ -33,6 +33,7 @@ def getDataloaders (configs):
     
 
     # create the needed distribution, x and y positions
+    l, r, b, t = 0, 0, 0, 0
     if growth == 1.0:
         y_pos = torch.tensor(load_mod.lon, dtype=torch.float)[:,0]
         x_pos = torch.tensor(load_mod.lat, dtype=torch.float)[0,:]
