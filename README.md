@@ -1,4 +1,4 @@
-# Structured Matrix Multiplication
+# Structured Matrix Method
 
 ## Python Anaconda Environment
 
