@@ -1,52 +1,66 @@
-
-
 import torch
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 
 
+from .fno import SpectralConv2d
 
 ################################################################
-# FNO
+# UFNO (SpectralConv2d same as FNO)
 ################################################################
-class SpectralConv2d (nn.Module):
-    def __init__(self, in_channels, out_channels, modes1, modes2):
-        super(SpectralConv2d, self).__init__()
-
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-        self.modes1 = modes1 #Number of Fourier modes to multiply, at most floor(N/2) + 1
-        self.modes2 = modes2
-
-        self.scale = (1 / (in_channels * out_channels))
-        self.weights1 = nn.Parameter(self.scale * torch.rand(in_channels, out_channels, self.modes1, self.modes2, dtype=torch.cfloat))
-        self.weights2 = nn.Parameter(self.scale * torch.rand(in_channels, out_channels, self.modes1, self.modes2, dtype=torch.cfloat))
-
-
-    # Complex multiplication
-    def compl_mul2d(self, input, weights):
-        # (batch, in_channel, x,y ), (in_channel, out_channel, x,y) -> (batch, out_channel, x,y)
-        return torch.einsum("bixy,ioxy->boxy", input, weights)
-
+class U_net (nn.Module):
+    def __init__(self, input_channels, output_channels, kernel_size, dropout_rate):
+        super(U_net, self).__init__()
+        self.input_channels = input_channels
+        self.conv1 = self.conv(input_channels, output_channels, kernel_size=kernel_size, stride=2, dropout_rate = dropout_rate)
+        self.conv2 = self.conv(input_channels, output_channels, kernel_size=kernel_size, stride=2, dropout_rate = dropout_rate)
+        self.conv2_1 = self.conv(input_channels, output_channels, kernel_size=kernel_size, stride=1, dropout_rate = dropout_rate)
+        self.conv3 = self.conv(input_channels, output_channels, kernel_size=kernel_size, stride=2, dropout_rate = dropout_rate)
+        self.conv3_1 = self.conv(input_channels, output_channels, kernel_size=kernel_size, stride=1, dropout_rate = dropout_rate)
+        
+        self.deconv2 = self.deconv(input_channels, output_channels)
+        self.deconv1 = self.deconv(input_channels*2, output_channels)
+        self.deconv0 = self.deconv(input_channels*2, output_channels)
+    
+        self.output_layer = self.output(input_channels*2, output_channels,  kernel_size=kernel_size, stride=1, dropout_rate = dropout_rate)
+           
     def forward(self, x):
-        batchsize = x.shape[0]
-        #Compute Fourier coeffcients up to factor of e^(- something constant)
-        x_ft = torch.fft.fft2(x)
+        out_conv1 = self.conv1(x)
+        out_conv2 = self.conv2_1(self.conv2(out_conv1))
+        out_conv3 = self.conv3_1(self.conv3(out_conv2))
+        out_deconv2 = self.deconv2(out_conv3)
+        concat2 = torch.cat((out_conv2, out_deconv2), 1)
+        out_deconv1 = self.deconv1(concat2)
+        concat1 = torch.cat((out_conv1, out_deconv1), 1)
+        out_deconv0 = self.deconv0(concat1)
+        concat0 = torch.cat((x, out_deconv0), 1)
+        out = self.output_layer(concat0)
 
-        # Multiply relevant Fourier modes
-        out_ft = torch.zeros(batchsize, self.out_channels,  x.size(-2), x.size(-1)//2 + 1, dtype=torch.cfloat, device=x.device)
-        out_ft[:, :, :self.modes1, :self.modes2] = \
-            self.compl_mul2d(x_ft[:, :, :self.modes1, :self.modes2], self.weights1)
-        out_ft[:, :, -self.modes1:, :self.modes2] = \
-            self.compl_mul2d(x_ft[:, :, -self.modes1:, :self.modes2], self.weights2)
+        return out
 
-        #Return to physical space
-        x = torch.fft.ifft2(out_ft, s=(x.size(-2), x.size(-1)))
-        return x
+    def conv(self, in_planes, output_channels, kernel_size, stride, dropout_rate):
+        return nn.Sequential(
+            nn.Conv2d(in_planes, output_channels, kernel_size=kernel_size,
+                      stride=stride, padding=(kernel_size - 1) // 2, bias=False),
+            nn.BatchNorm2d(output_channels),
+            nn.LeakyReLU(0.1, inplace=True),
+            nn.Dropout(dropout_rate)
+        )
+
+    def deconv(self, input_channels, output_channels):
+        return nn.Sequential(
+            nn.ConvTranspose2d(input_channels, output_channels, kernel_size=4,
+                               stride=2, padding=1),
+            nn.LeakyReLU(0.1, inplace=True)
+        )
+
+    def output(self, input_channels, output_channels, kernel_size, stride, dropout_rate):
+        return nn.Conv2d(input_channels, output_channels, kernel_size=kernel_size,
+                         stride=stride, padding=(kernel_size - 1) // 2)
 
 
-class FNO (nn.Module):
+class UFNO(nn.Module):
     # Set a class attribute for the default configs.
     configs = {
         'num_train':            896,
@@ -76,7 +90,7 @@ class FNO (nn.Module):
         'growth':           1.0,                        # Growth rate of the nonuniform sampling region
     }
     def __init__(self, configs):
-        super(FNO, self).__init__()
+        super(UFNO, self).__init__()
 
         self.modes1 = configs['modes1']
         self.modes2 = configs['modes2']
@@ -103,6 +117,12 @@ class FNO (nn.Module):
         self.w3i = nn.Conv2d(self.width, self.width, 1)
         self.w4i = nn.Conv2d(self.width, self.width, 1)
         self.w5i = nn.Conv2d(self.width, self.width, 1)
+        self.unet3r = U_net(self.width, self.width, 3, 0)
+        self.unet4r = U_net(self.width, self.width, 3, 0)
+        self.unet5r = U_net(self.width, self.width, 3, 0)
+        self.unet3i = U_net(self.width, self.width, 3, 0)
+        self.unet4i = U_net(self.width, self.width, 3, 0)
+        self.unet5i = U_net(self.width, self.width, 3, 0)
         self.fc1 = nn.Linear(self.width, 128).to(torch.cfloat)
         self.fc2 = nn.Linear(128, 1).to(torch.cfloat)
 
@@ -129,20 +149,21 @@ class FNO (nn.Module):
 
         x1 = self.conv3(x)
         x2 = self.w3r(x.real) + 1j * self.w3i(x.imag)
-        x = x1 + x2
+        x3 = self.unet3r(x.real) + 1j * self.unet3i(x.imag)
+        x = x1 + x2 + x3 
         x = F.gelu(x.real) + 1j * F.gelu(x.imag)
 
         x1 = self.conv4(x)
         x2 = self.w4r(x.real) + 1j * self.w4i(x.imag)
-        x = x1 + x2
+        x3 = self.unet4r(x.real) + 1j * self.unet4i(x.imag)
+        x = x1 + x2 + x3 
         x = F.gelu(x.real) + 1j * F.gelu(x.imag)
-
 
         x1 = self.conv5(x)
         x2 = self.w5r(x.real) + 1j * self.w5i(x.imag)
-        x = x1 + x2
+        x3 = self.unet5r(x.real) + 1j * self.unet5i(x.imag)
+        x = x1 + x2 + x3 
 
-        # x = x[..., :-self.padding, :-self.padding] # pad the domain if input is non-periodic
         x = x.permute(0, 2, 3, 1)
         x = self.fc1(x)
         x = F.gelu(x.real) + 1j * F.gelu(x.imag)
@@ -151,10 +172,12 @@ class FNO (nn.Module):
 
     def get_grid(self, shape, device):
         batchsize, size_x, size_y = shape[0], shape[2], shape[1]
-        gridx = torch.tensor(np.linspace(0, 1, size_x), dtype=torch.float)
-        # gridx = x_pos / torch.max(x_pos)
+
+        gridx = torch.linspace(0,1,size_x, dtype=torch.float)
         gridx = gridx.reshape(1, 1, size_x, 1).repeat([batchsize, size_y, 1, 1])
-        gridy = torch.tensor(np.linspace(0, 1, size_y), dtype=torch.float)
-        # gridy = y_pos / torch.max(y_pos)
+
+        gridy = torch.linspace(0,1,size_y, dtype=torch.float)
         gridy = gridy.reshape(1, size_y, 1, 1).repeat([batchsize, 1, size_x, 1])
+
         return torch.cat((gridx, gridy), dim=-1).to(device)
+
