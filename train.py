@@ -20,8 +20,8 @@ from _Utilities.utilities import count_params, percentage_difference
 ################################################################
 # TODO: Just give all possible options in comments for the config.
 configs = {
-    'model':                'fno_smm',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
-    'experiment':           'Elasticity',               # Burgers, Elasticity, ShearLayer   
+    'model':                'ufno_smm',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
+    'experiment':           'Airfoil',               # Burgers, Elasticity, Airfoil, ShearLayer   
     # 'num_train':            1000,
     # 'num_test':             20,
     # 'batch_size':           20, 
@@ -242,6 +242,9 @@ def train (configs):
 
     # Save Model
     if configs['save_model']:
+        # Remove unnecessary data from models
+        best_model.point_data = None
+        best_model.denormalizer = None
         print(f"Experiment: {configs['experiment']} \t- Model: {configs['model']} \t- Error: {lowest_error:.2f}%")
         torch.save(best_model, f"_Models/{configs['experiment']}_{configs['model']}.pt")
 
