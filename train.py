@@ -119,6 +119,8 @@ def train (configs):
     print(f'Loading and processing data.')
 
     train_loader, test_loader = getDataloaders(configs)
+    ### TODO TEMPORARY
+    model.point_data = train_loader.point_data
     
     print(f'Processing finished in {time.time()-start_time:.2f}s.')
     
@@ -185,7 +187,7 @@ def train (configs):
 
         scheduler.step()
 
-        print(f"Epoch [{epoch:03d}/{configs['epochs']-1}] in {stop_train-start_train:.2f}s with LR {scheduler.get_last_lr()[0]:.2e}: \tTrain loss {train_loss:.4e} \t- Test loss {test_loss:.4e} \t- Test Error {100*relative_error:.2f}% \t- Median Test Error {100*torch.median(median_error).item():.2f}%")
+        print(f"Epoch [{epoch:03d}/{configs['epochs']-1}] in {stop_train-start_train:.2f}s with LR {scheduler.get_last_lr()[0]:.2e}: \tTrain loss {train_loss:.4e} \t- Test loss {test_loss:.4e} \t- Test Error {relative_error:.2f}% \t- Median Test Error {torch.median(median_error).item():.2f}%")
         train_loss_hist.append(train_loss)
         test_loss_hist.append(test_loss)
 

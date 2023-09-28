@@ -102,8 +102,8 @@ class FNO (nn.Module):
         self.fc1 = nn.Linear(self.width, 128)
         self.fc2 = nn.Linear(128, 1)
 
-    def forward(self, x, point_data):
-        grid = self.get_grid(point_data, x.shape, x.device)
+    def forward(self, x):
+        grid = self.get_grid(self.point_data, x.shape, x.device)
 
         x = torch.cat((x, grid), dim=-1)
         x = self.fc0(x)
