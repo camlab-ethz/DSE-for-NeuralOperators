@@ -13,7 +13,7 @@ import torch.nn.functional as F
 
 # class for 2-dimensional Fourier transforms on a nonequispaced lattice of data
 class VandermondeTransform:
-    def __init__ (self, x_positions, y_positions, x_modes, y_modes, device):
+    def __init__(self, x_positions, y_positions, x_modes, y_modes, device):
         # scalte between 0 and 2 pi
         x_positions -= torch.min(x_positions)
         y_positions -= torch.min(y_positions)
@@ -49,7 +49,7 @@ class VandermondeTransform:
                 V_y[-(row+1), col] = torch.exp(-1j * (self.y_l - row - 1) *  self.y_positions[col]) 
         V_y = torch.divide(V_y, np.sqrt(self.y_l))
 
-        return torch.transpose(V_x, 0, 1), torch.conj(V_x), torch.transpose(V_y, 0, 1), torch.conj(V_y)
+        return torch.transpose(V_x, 0, 1), torch.conj(V_x.clone()), torch.transpose(V_y, 0, 1), torch.conj(V_y.clone())
 
     def forward(self, data):
         # given:    data (in spatial domain)
@@ -78,7 +78,39 @@ class VandermondeTransform:
                 2, 3)
         
         return data_inv
-    
+
+    def forward_x(self, data):
+        # given:    data in spatial domain
+        # return:   the forward transformation just along the x-axis, for FFNO
+
+        data_fwd = torch.matmul(data, self.Vxt)
+
+        return data_fwd
+
+    def inverse_x(self, data):
+        # given:    data (in Fourier domain)
+        # return:   the inverse Fourier transformation just along x-axis
+        
+        data_inv = torch.matmul(data, self.Vxc)
+        
+        return data_inv
+
+    def forward_y(self, data):
+        # given:    data in spatial domain
+        # return:   the forward transformation just along the x-axis, for FFNO
+        
+        data_fwd = torch.matmul(data, self.Vyt)
+
+        return data_fwd
+
+    def inverse_y(self, data):
+        # given:    data (in Fourier domain)
+        # return:   the inverse Fourier transformation just along x-axis
+        
+        data_inv = torch.matmul(data, self.Vyc[:self.y_modes,:])
+        
+        return data_inv
+
 
 class SpectralConv2d_SMM (nn.Module):
     def __init__(self, in_channels, out_channels, modes1, modes2, transformer):
@@ -144,7 +176,7 @@ class FNO_SMM (nn.Module):
         'center_1':         256,                        # X-center of the nonuniform sampling region
         'center_2':         768,                        # Y-center of the nonuniform sampling region
         'uniform':          100,                        # Width of the nonuniform sampling region
-        'growth':           1.0,                        # Growth rate of the nonuniform sampling region
+        'growth':           1.75,                        # Growth rate of the nonuniform sampling region
     }
     def __init__(self, configs):
         super(FNO_SMM, self).__init__()

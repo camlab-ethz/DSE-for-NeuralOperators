@@ -6,105 +6,117 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+from .fno_smm import SpectralConv2d_SMM, VandermondeTransform
 
 ################################################################
-#  2d fourier layer, UFNO Structured Matrix
+# UFNO_SMM (SpectralConv2d same as FNO)
 ################################################################
-class SpectralConv2d_UFNO_SMM(nn.Module):
-    def __init__(self, in_channels, out_channels, modes1, modes2, transformer):
-        super(SpectralConv2d_UFNO_SMM, self).__init__()
 
-        """
-        2D Fourier layer. It does FFT, linear transform, and Inverse FFT.    
-        """
-
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-        self.modes1 = modes1 #Number of Fourier modes to multiply, at most floor(N/2) + 1
-        self.modes2 = modes2
-
-        self.scale = (1 / (in_channels * out_channels))
-        self.weights1 = nn.Parameter(self.scale * torch.rand(in_channels, out_channels, self.modes1, self.modes2, dtype=torch.cfloat))
-        self.weights2 = nn.Parameter(self.scale * torch.rand(in_channels, out_channels, self.modes1, self.modes2, dtype=torch.cfloat))
-
-        self.transformer = transformer
-
-    # Complex multiplication
-    def compl_mul2d(self, input, weights):
-        # (batch, in_channel, x,y ), (in_channel, out_channel, x,y) -> (batch, out_channel, x,y)
-        return torch.einsum("bixy,ioxy->boxy", input, weights)
-
+# the 2D U-Net
+class U_net (nn.Module):
+    def __init__(self, input_channels, output_channels, kernel_size, dropout_rate):
+        super(U_net, self).__init__()
+        self.input_channels = input_channels
+        padding = (kernel_size - 1) // 2  # Padding size for 'same' convolution
+        
+        self.conv1 = self.conv(input_channels, output_channels, kernel_size=kernel_size, stride=2, dropout_rate=dropout_rate, padding=padding)
+        self.conv2 = self.conv(output_channels, output_channels, kernel_size=kernel_size, stride=2, dropout_rate=dropout_rate, padding=padding)
+        self.conv2_1 = self.conv(output_channels, output_channels, kernel_size=kernel_size, stride=1, dropout_rate=dropout_rate, padding=padding)
+        self.conv3 = self.conv(output_channels, output_channels, kernel_size=kernel_size, stride=2, dropout_rate=dropout_rate, padding=padding)
+        self.conv3_1 = self.conv(output_channels, output_channels, kernel_size=kernel_size, stride=1, dropout_rate=dropout_rate, padding=padding)
+        
+        self.deconv2 = self.deconv(output_channels, output_channels, padding=padding, stride = 2)
+        self.deconv1 = self.deconv(output_channels*2, output_channels, padding=padding, stride = 2)
+        self.deconv0 = self.deconv(output_channels*2, output_channels, padding=padding, stride = 2)
+    
+        self.output_layer = self.output(output_channels*2, output_channels, kernel_size=kernel_size, stride=1, dropout_rate=dropout_rate, padding=padding)
+           
     def forward(self, x):
-        batchsize = x.shape[0]
-        #Compute Fourier coeffcients up to factor of e^(- something constant)
-        x_ft = self.transformer.forward(x)
+        out_conv1 = self.conv1(x)
+        out_conv2 = self.conv2_1(self.conv2(out_conv1))
+        out_conv3 = self.conv3_1(self.conv3(out_conv2))
+        out_deconv2 = self.deconv2(out_conv3)[...,:71]
+        concat2 = torch.cat((out_conv2, out_deconv2), 1)
+        out_deconv1 = self.deconv1(concat2)[...,:141]
+        concat1 = torch.cat((out_conv1, out_deconv1), 1)
+        out_deconv0 = self.deconv0(concat1)
+        concat0 = torch.cat((x, out_deconv0), 1)
+        out = self.output_layer(concat0)
 
-        # Multiply relevant Fourier modes
-        out_ft = torch.zeros(batchsize, self.out_channels,  2*self.modes1, self.modes2, dtype=torch.cfloat, device=x.device)
-        # out_ft[:, :, :self.modes1, :self.modes2] = self.compl_mul2d(x_ft, self.weights1)
-        out_ft[:, :, :self.modes1, :self.modes2] = self.compl_mul2d(x_ft[:, :, :self.modes1, :self.modes2], self.weights1)
-        out_ft[:, :, -self.modes1:, :self.modes2] = self.compl_mul2d(x_ft[:, :, -self.modes1:, :self.modes2], self.weights2)
+        return out
 
-        #Return to physical space
-        x = self.transformer.inverse(out_ft)
+    def conv(self, in_planes, output_channels, kernel_size, stride, dropout_rate, padding):
+        return nn.Sequential(
+            nn.Conv2d(in_planes, output_channels, kernel_size=kernel_size,
+                      stride=stride, padding=padding, bias=False),
+            nn.BatchNorm2d(output_channels),
+            nn.LeakyReLU(0.1, inplace=True),
+            nn.Dropout(dropout_rate)
+        )
 
-        return x
+    def deconv(self, input_channels, output_channels, padding, stride):
+        return nn.Sequential(
+            nn.ConvTranspose2d(input_channels, output_channels, kernel_size=4,
+                               stride=stride, padding=padding),
+            nn.LeakyReLU(0.1, inplace=True)
+        )
+
+    def output(self, input_channels, output_channels, kernel_size, stride, dropout_rate, padding):
+        return nn.Conv2d(input_channels, output_channels, kernel_size=kernel_size,
+                         stride=stride, padding=padding)
+
 
 class UFNO_SMM(nn.Module):
-
     # Set a class attribute for the default configs.
     configs = {
-        'num_train':            896,
-        'num_test':             128,
-        'batch_size':           5, 
+        'num_train':            16,#896,
+        'num_test':             2,#128,
+        'batch_size':           1,#8, 
         'epochs':               101,
         'test_epochs':          10,
 
-        'datapath':             "_Data/ShearLayer/",  # Path to data
+        'datapath':             "_Data/ShearLayer/ddsl_1024/",    # Path to data
 
         # Training specific parameters
         'learning_rate':        0.005,
         'scheduler_step':       10,
         'scheduler_gamma':      0.97,
-        'weight_decay':         1e-5,                   # Weight decay
+        'weight_decay':         1e-4,                   # Weight decay
         'loss_fn':              'L1',                   # Loss function to use - L1, L2
 
         # Model specific parameters
-        'modes':                16,                     # Number of modes to use in the Fourier layer
+        'modes1':               20,                     # Number of x-modes to use in the Fourier layer
+        'modes2':               20,                     # Number of y-modes to use in the Fourier layer
         'width':                32,                     # Number of channels in the convolutional layers
+
+        # Dataset specific parameters
+        'center_1':         256,                        # X-center of the nonuniform sampling region
+        'center_2':         768,                        # Y-center of the nonuniform sampling region
+        'uniform':          100,                        # Width of the nonuniform sampling region
+        'growth':           1.75,                        # Growth rate of the nonuniform sampling region
     }
-    
-    def __init__(self, modes1, modes2, width, transformer, sparse_x):
+    def __init__(self, configs):
         super(UFNO_SMM, self).__init__()
 
-        """
-        The overall network. It contains 4 layers of the Fourier layer.
-        1. Lift the input to the desire channel dimension by self.fc0 .
-        2. 4 layers of the integral operators u' = (W + K)(u).
-            W defined by self.w; K defined by self.conv .
-        3. Project from the channel space to the output space by self.fc1 and self.fc2 .
-        
-        input: the solution of the previous 10 timesteps + 2 locations (u(t-10, x, y), ..., u(t-1, x, y),  x, y)
-        input shape: (batchsize, x=64, y=64, c=12)
-        output: the solution of the next timestep
-        output shape: (batchsize, x=64, y=64, c=1)
-        """
-
-        self.modes1 = modes1
-        self.modes2 = modes2
-        self.width = width
-        self.x = sparse_x
+        self.modes1 = configs['modes1']
+        self.modes2 = configs['modes2']
+        self.width = configs['width']
+        self.sparse_x, self.y_pos = configs['point_data']
         self.padding = 0 # pad the domain if input is non-periodic
+
+        
+        # Define Structured Matrix Method
+        transform = VandermondeTransform(self.sparse_x, self.y_pos, self.modes1, self.modes2, configs['device'])
 
         # input channel is 12: the solution of the previous 10 timesteps + 2 locations (u(t-10, x, y), ..., u(t-1, x, y),  x, y)
         self.fc0 = nn.Linear(3, self.width).to(torch.cfloat)
         
-        self.conv0 = SpectralConv2d_UFNO_SMM(self.width, self.width, self.modes1, self.modes2, transformer)
-        self.conv1 = SpectralConv2d_UFNO_SMM(self.width, self.width, self.modes1, self.modes2, transformer)
-        self.conv2 = SpectralConv2d_UFNO_SMM(self.width, self.width, self.modes1, self.modes2, transformer)
-        self.conv3 = SpectralConv2d_UFNO_SMM(self.width, self.width, self.modes1, self.modes2, transformer)
-        self.conv4 = SpectralConv2d_UFNO_SMM(self.width, self.width, self.modes1, self.modes2, transformer)
-        self.conv5 = SpectralConv2d_UFNO_SMM(self.width, self.width, self.modes1, self.modes2, transformer)
+        self.conv0 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2, transform)
+        self.conv1 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2, transform)
+        self.conv2 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2, transform)
+        self.conv3 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2, transform)
+        self.conv4 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2, transform)
+        self.conv5 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2, transform)
         
         self.w0r = nn.Conv2d(self.width, self.width, 1)
         self.w1r = nn.Conv2d(self.width, self.width, 1)
