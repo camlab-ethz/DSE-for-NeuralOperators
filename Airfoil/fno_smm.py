@@ -13,7 +13,7 @@ import numpy as np
 
 # class for fully nonequispaced 2d points
 class VFT:
-    def __init__(self, x_positions, y_positions, modes):
+    def __init__ (self, x_positions, y_positions, modes):
         # it is important that positions are scaled between 0 and 2*pi
         x_positions -= torch.min(x_positions)
         self.x_positions = x_positions * 6.28 / torch.max(x_positions)

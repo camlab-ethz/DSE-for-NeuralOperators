@@ -49,6 +49,8 @@ def getDataloaders (configs):
     train_loader = DataLoader(TensorDataset(train_a, train_u), batch_size=batch_size, shuffle=True)
     test_loader = DataLoader(TensorDataset(test_a, test_u), batch_size=1, shuffle=False)
 
+    ### Used for irregularly spaced data
+    train_loader.point_data = [sparse_x, y_pos]    # TODO: Ugly.
 
     return train_loader, test_loader
 
