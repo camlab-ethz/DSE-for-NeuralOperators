@@ -9,7 +9,8 @@ from .fno import SpectralConv2d
 ################################################################
 # UFNO (SpectralConv2d same as FNO)
 ################################################################
-class U_net(nn.Module):
+# the 2D U-Net
+class U_net (nn.Module):
     def __init__(self, input_channels, output_channels, kernel_size, dropout_rate):
         super(U_net, self).__init__()
 
@@ -66,8 +67,8 @@ class U_net(nn.Module):
 class UFNO (nn.Module):
     # Set a class attribute for the default configs.
     configs = {
-        'num_train':            18*50,
-        'num_test':             18*10,
+        'num_train':            18*1,#0,
+        'num_test':             18*1,#0,
         'batch_size':           30, 
         'epochs':               101,
         'test_epochs':          10,
@@ -90,7 +91,7 @@ class UFNO (nn.Module):
         'center_lat':       180,                        # Lattitude center of the nonuniform sampling region
         'center_lon':       140,                        # Longitude center of the nonuniform sampling region
         'uniform':          100,                        # Width of the nonuniform sampling region
-        'growth':           2.0,                        # Growth rate of the nonuniform sampling region
+        'growth':           1.0,                        # Growth rate of the nonuniform sampling region
     }
     def __init__(self, configs):
         super(UFNO, self).__init__()

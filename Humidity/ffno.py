@@ -101,7 +101,7 @@ class FFNO (nn.Module):
         'center_lat':       180,                        # Lattitude center of the nonuniform sampling region
         'center_lon':       140,                        # Longitude center of the nonuniform sampling region
         'uniform':          100,                        # Width of the nonuniform sampling region
-        'growth':           2.0,                        # Growth rate of the nonuniform sampling region
+        'growth':           1.0,                        # Growth rate of the nonuniform sampling region
     }
     def __init__(self, configs):
         super(FFNO, self).__init__()
