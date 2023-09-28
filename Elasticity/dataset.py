@@ -3,8 +3,6 @@
 import torch
 import numpy as np
 
-from _Utilities.utilities import normalize
-
 
 class Dataset (torch.utils.data.Dataset):
     def __init__(self, rr, xy, sigma):
@@ -28,7 +26,7 @@ def getDataloaders (configs):
         train_loader (torch.utils.data.DataLoader): train dataloader
         test_loader (torch.utils.data.DataLoader): test dataloader
     """
-    path_rr = configs['datapath']+'Meshes/Random_UnitCell_rr_10.npy'
+    path_rr = configs['datapath']+'/Meshes/Random_UnitCell_rr_10.npy'
     path_XY = configs['datapath']+'/Meshes/Random_UnitCell_XY_10.npy'
     path_Sigma = configs['datapath']+'/Meshes/Random_UnitCell_sigma_10.npy'
 
@@ -39,14 +37,13 @@ def getDataloaders (configs):
     input_s = np.load(path_Sigma, allow_pickle=True)
     input_s = torch.tensor(input_s, dtype=torch.float).permute(1,0).unsqueeze(-1)
 
-    # normalize unnecessary for GeoFNO and GeoUFNO, for the others only normalize the output Sigma
-    if configs['model'] != 'geo_fno' and configs['model'] != 'geo_ufno':
-        min_s = torch.min(input_s)
-        max_s = torch.max(input_s)
-        def normalizer (sigma):
-            return (sigma - min_s) / (max_s - min_s)
-        def denormalizer (sigma):
-            return sigma * (max_s - min_s) + min_s
+    # Only denormalizer needed for models
+    min_s = torch.min(input_s)
+    max_s = torch.max(input_s)
+    def normalizer (sigma):
+        return (sigma - min_s) / (max_s - min_s)
+    def denormalizer (sigma):
+        return sigma * (max_s - min_s) + min_s
 
     train_rr = input_rr[:configs['num_train']]
     test_rr = input_rr[-configs['num_test']:]

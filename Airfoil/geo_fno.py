@@ -9,7 +9,7 @@ import numpy as np
 
 
 ################################################################
-# GeoFNO
+# GeoFNO (SpectralConv2d and IPHI same as Elasticity)
 ################################################################
 class SpectralConv2d (nn.Module):
     def __init__(self, in_channels, out_channels, modes1, modes2, s1=32, s2=32):
@@ -215,20 +215,22 @@ class Geo_FNO (nn.Module):
     """
     # Set a class attribute for the default configs.
     configs = {
-        'num_train':            1000,
-        'num_test':             200,
+        'num_train':            1500,
+        'num_test':             300,
         'batch_size':           20, 
         'epochs':               501,
         'test_epochs':          10,
 
-        'datapath':             "_Data/Elasticity/",  # Path to data
+        'datapath':             "_Data/Airfoil/",  # Path to data
+        'data_small_domain':    True,              # Whether to use a small domain or not for specifically the Airfoil experiment
 
         # Training specific parameters
-        'learning_rate':        0.001,
-        'scheduler_step':       50,
-        'scheduler_gamma':      0.5,
+        'learning_rate':        0.005,
+        'scheduler_step':       10,
+        'scheduler_gamma':      0.97,
         'weight_decay':         1e-4,                   # Weight decay
         'loss_fn':              'L1',                   # Loss function to use - L1, L2
+        'iphi_loss_reg':        0.1,                    # Regularization parameter for IPHI loss term
 
         # Model specific parameters
         'modes1':               12,                     # Number of x-modes to use in the Fourier layer
@@ -257,15 +259,15 @@ class Geo_FNO (nn.Module):
 
         self.conv0 = SpectralConv2d(self.width, self.width, self.modes1, self.modes2, self.s1, self.s2)
         self.conv1 = SpectralConv2d(self.width, self.width, self.modes1, self.modes2)
-        self.conv2 = SpectralConv2d(self.width, self.width, self.modes1, self.modes2)
+        #self.conv2 = SpectralConv2d(self.width, self.width, self.modes1, self.modes2)
         self.conv3 = SpectralConv2d(self.width, self.width, self.modes1, self.modes2)
         self.conv4 = SpectralConv2d(self.width, self.width, self.modes1, self.modes2, self.s1, self.s2)
         self.w1 = nn.Conv2d(self.width, self.width, 1)
-        self.w2 = nn.Conv2d(self.width, self.width, 1)
+        #self.w2 = nn.Conv2d(self.width, self.width, 1)
         self.w3 = nn.Conv2d(self.width, self.width, 1)
         self.b0 = nn.Conv2d(2, self.width, 1)
         self.b1 = nn.Conv2d(2, self.width, 1)
-        self.b2 = nn.Conv2d(2, self.width, 1)
+        #self.b2 = nn.Conv2d(2, self.width, 1)
         self.b3 = nn.Conv2d(2, self.width, 1)
         self.b4 = nn.Conv1d(2, self.width, 1)
 
@@ -279,7 +281,8 @@ class Geo_FNO (nn.Module):
         # xi (batch, xi1, xi2, 2) the computational mesh (uniform)
         # x_in (batch, Nx, 2) the input mesh (query mesh)
 
-        code, u = x
+        u = x
+        code = None
         x_in, x_out = None, None
 
         if self.is_mesh and x_in == None:
@@ -289,10 +292,9 @@ class Geo_FNO (nn.Module):
         grid = self.get_grid([u.shape[0], self.s1, self.s2], u.device).permute(0, 3, 1, 2)
         
 
-        u = self.fc0(u)     #[20, 972, 2]
+        u = self.fc0(u)
         u = u.permute(0, 2, 1)
 
-        # [20, 32, 40, 40]
         uc1 = self.conv0(u, x_in=x_in, iphi=self.model_iphi, code=code)
         uc3 = self.b0(grid)
         uc = uc1 + uc3
@@ -304,11 +306,11 @@ class Geo_FNO (nn.Module):
         uc = uc1 + uc2 + uc3
         uc = F.gelu(uc)
 
-        uc1 = self.conv2(uc)
-        uc2 = self.w2(uc)
-        uc3 = self.b2(grid)
-        uc = uc1 + uc2 + uc3
-        uc = F.gelu(uc)
+        # uc1 = self.conv2(uc)
+        # uc2 = self.w2(uc)
+        # uc3 = self.b2(grid)
+        # uc = uc1 + uc2 + uc3
+        # uc = F.gelu(uc)
 
         uc1 = self.conv3(uc)
         uc2 = self.w3(uc)
@@ -319,11 +321,11 @@ class Geo_FNO (nn.Module):
         u = self.conv4(uc, x_out=x_out, iphi=self.model_iphi, code=code)
         u3 = self.b4(x_out.permute(0, 2, 1))
         u = u + u3
-        #[20, 32, 972]
+
         u = u.permute(0, 2, 1)
-        u = self.fc1(u)     #[20, 972, 128]
+        u = self.fc1(u)
         u = F.gelu(u)
-        u = self.fc2(u)     #[20, 972, 2]
+        u = self.fc2(u)
         return u
 
 

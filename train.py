@@ -20,7 +20,7 @@ from _Utilities.utilities import count_params, percentage_difference
 ################################################################
 # TODO: Just give all possible options in comments for the config.
 configs = {
-    'model':                'ufno_smm',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
+    'model':                'geo_fno',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
     'experiment':           'Airfoil',               # Burgers, Elasticity, Airfoil, ShearLayer   
     # 'num_train':            1000,
     # 'num_test':             20,
@@ -39,9 +39,11 @@ configs = {
     'load_model':           False,
     'model_path':           '_Models/model.pt',      # Path to model file if loading model
     'min_max_norm':         False,
+    # 'data_small_domain':    True,              # Whether to use a small domain or not for specifically the Airfoil experiment
 
     'device':               torch.device('cuda'),   # Define device for training & inference - GPU/CPU
-    'loss_fn':              'L2',                   # Loss function to use - L1, L2
+    'iphi_loss_reg':        0.0,                    # Regularization parameter for IPHI loss term
+    'loss_fn':              'L1',                   # Loss function to use - L1, L2
     #'datapath':             '/hdd/mmichelis/VNO_data/elasticity/',  # Path to data
 
     # Specifically for Burgers
@@ -138,6 +140,7 @@ def train (configs):
     else:
         model = Model(configs).to(device)
     
+    # TODO: Trainable parameters will now include IPHI parameters as well.
     print(f"Number of trainable parameters: {count_params(model)}")
     optimizer = Adam(model.parameters(), lr=configs['learning_rate'], weight_decay=configs['weight_decay'])
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=configs['scheduler_step'], gamma=configs['scheduler_gamma'])
@@ -173,6 +176,13 @@ def train (configs):
             predictions = model(inputs)
 
             loss = loss_fn(predictions.view(batch_size, -1), targets.view(batch_size, -1))
+
+            # For diffeomorphisms, additional loss term:
+            if hasattr(model, "model_iphi") and configs['iphi_loss_reg'] > 0:
+                samples_x = torch.rand(batch_size, targets.shape[1], 2).cuda() * 3 -1
+                samples_xi = model.model_iphi(samples_x)
+                loss += configs['iphi_loss_reg'] * loss_fn(samples_xi, samples_x)
+
             train_loss += loss.item()
 
             optimizer.zero_grad()
