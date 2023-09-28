@@ -20,8 +20,8 @@ from _Utilities.utilities import count_params, percentage_difference
 ################################################################
 # TODO: Just give all possible options in comments for the config.
 configs = {
-    'model':                'ufno_smm',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
-    'experiment':           'Airfoil',               # Burgers, Elasticity, Airfoil, ShearLayer   
+    'model':                'fno',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
+    'experiment':           'ShearLayer',               # Burgers, Elasticity, Airfoil, ShearLayer   
     # 'num_train':            1000,
     # 'num_test':             20,
     # 'batch_size':           20, 
@@ -47,14 +47,13 @@ configs = {
     #'datapath':             '/hdd/mmichelis/VNO_data/elasticity/',  # Path to data
 
     # Specifically for Burgers
-    'data_dist':            'uniform',              # Data distribution to use - uniform, cubic_from_conexp, random
+    # 'data_dist':            'uniform',              # Data distribution to use - uniform, cubic_from_conexp, random
 
     # Specifically for Shear Layer
-    'center_1':         256,                        # Center of top interface
-    'center_2':         768,                        # Center of bottom interface
-    'uniform':          100,                        # Number of points uniform along interface
-    'growth':           1.0,                        # Growth factor, how quickly do points become sparse
-    'ShearLayer_SMM':   False,                      # Decides what type of data to return
+    # 'center_1':         256,                        # Center of top interface
+    # 'center_2':         768,                        # Center of bottom interface
+    # 'uniform':          100,                        # Number of points uniform along interface
+    # 'growth':           1.0,                        # Growth factor, how quickly do points become sparse
 }
 
 
@@ -175,7 +174,14 @@ def train (configs):
 
             predictions = model(inputs)
 
-            loss = loss_fn(predictions.view(batch_size, -1), targets.view(batch_size, -1))
+            # Compute loss separate for complex numbers
+            if predictions.is_complex():
+                loss = (
+                    loss_fn(predictions.real.view(batch_size, -1), targets.real.view(batch_size, -1)) 
+                    + loss_fn(predictions.imag.view(batch_size, -1), targets.imag.view(batch_size, -1))
+                )
+            else:
+                loss = loss_fn(predictions.view(batch_size, -1), targets.view(batch_size, -1))
 
             # For diffeomorphisms, additional loss term:
             if hasattr(model, "model_iphi") and configs['iphi_loss_reg'] > 0:
@@ -216,7 +222,17 @@ def train (configs):
 
                 predictions = model(inputs)
 
-                loss = loss_fn(predictions.view(batch_size, -1), targets.view(batch_size, -1))
+                # Compute loss separate for complex numbers
+                if predictions.is_complex():
+                    loss = (
+                        loss_fn(predictions.real.view(batch_size, -1), targets.real.view(batch_size, -1)) 
+                        + loss_fn(predictions.imag.view(batch_size, -1), targets.imag.view(batch_size, -1))
+                    )
+                    # For metrics we only consider REAL parts
+                    predictions = predictions.real
+                    targets = targets.real
+                else:
+                    loss = loss_fn(predictions.view(batch_size, -1), targets.view(batch_size, -1))
                 test_loss += loss.item()
 
                 relative_error += percentage_difference(targets.view(batch_size, -1), predictions.view(batch_size, -1))

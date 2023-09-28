@@ -8,7 +8,7 @@ from torch.utils.data import TensorDataset
 
 def getDataloaders (configs):
     """
-    Loads the required data for the Elasticity experiment and returns the train and test dataloaders.
+    Loads the required data for the Airfoil experiment and returns the train and test dataloaders.
 
     Returns:
         train_loader (torch.utils.data.DataLoader): train dataloader

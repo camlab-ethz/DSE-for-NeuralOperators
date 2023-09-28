@@ -10,7 +10,7 @@ import numpy as np
 
 def getDataloaders (configs):
     """
-    Loads the required data for the Burgers experiment and returns the train and test dataloaders.
+    Loads the required data for the Shearlayer experiment and returns the train and test dataloaders.
 
     Returns:
         train_loader (torch.utils.data.DataLoader): train dataloader
@@ -26,40 +26,32 @@ def getDataloaders (configs):
     uniform = configs['uniform']  
     growth = configs['growth']  
 
-    data_path = configs['data_path']
+    data_path = configs['datapath']
     
     load_mod = LoadShearflow(ntrain, ntest, file=data_path)
     train_a, train_u, test_a, test_u = load_mod.return_data()
 
-    if configs['ShearLayer_SMM']:
-
-        # create the needed distribution, x and y positions
-        sparsify = MakeSparse2D(train_a.shape[2], train_a.shape[1])
+    
+    # create the needed distribution, x and y positions
+    sparsify = MakeSparse2D(train_a.shape[2], train_a.shape[1])
+    if 'smm' in configs['model']:
         train_a, sparse_x = sparsify.shear_distribution(train_a, center_points, growth, uniform)
         train_u = sparsify.shear_distribution(train_u, center_points, growth, uniform)[0]
         test_a = sparsify.shear_distribution(test_a, center_points, growth, uniform)[0]
         test_u = sparsify.shear_distribution(test_u, center_points, growth, uniform)[0]
-        
-        y_pos = torch.arange(1024)
-
-        # create data loaders
-        train_loader = DataLoader(TensorDataset(train_a, train_u), batch_size=batch_size, shuffle=True)
-        test_loader = DataLoader(TensorDataset(test_a, test_u), batch_size=1, shuffle=False)
-
     else:
-    
-        # create the needed distribution, x and y positions
-        sparsify = MakeSparse2D(train_a.shape[2], train_a.shape[1])
         sparse_x = sparsify.shear_distribution(train_a, center_points, growth, uniform)[1]
         sparse_x = sparse_x.int()
-        y_pos = torch.arange(1024)
 
-        # create data loaders
-        train_loader = DataLoader(TensorDataset(train_a, train_u), batch_size=batch_size, shuffle=True)
-        test_loader = DataLoader(TensorDataset(test_a, test_u), batch_size=1, shuffle=False)
+    y_pos = torch.arange(1024)
+
+    # create data loaders
+    train_loader = DataLoader(TensorDataset(train_a, train_u), batch_size=batch_size, shuffle=True)
+    test_loader = DataLoader(TensorDataset(test_a, test_u), batch_size=1, shuffle=False)
 
 
     return train_loader, test_loader
+
 
 class MakeSparse2D:
     # this class handles sparse distributions for 2d and the sphere projected to a cartesian grid
