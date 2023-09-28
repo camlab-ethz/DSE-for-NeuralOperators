@@ -13,8 +13,8 @@ import copy
 
 import sys
 sys.path.append('../')
-from Adam import Adam
-from _utilities import count_params, percentage_difference
+from Utilities._Adam import Adam
+from Utilities._utilities import count_params, percentage_difference
 
 import matplotlib.pyplot as plt
 import importlib
@@ -24,24 +24,32 @@ import importlib
 # configs
 ################################################################
 configs = {
-    'model':                'don',
-    'experiment':           'elasticity',
-    'num_train':            1000, #1000
-    'num_test':             200, #200 
-    'batch_size':           20, 
-    'epochs':               10001,
-    'test_epochs':          10,
-    'learning_rate':        0.0005,
-    'scheduler_step':       5,
-    'scheduler_gamma':      0.99,
+    'model':                'fno',
+    'experiment':           'Burgers',
+    # 'num_train':            1000,
+    # 'num_test':             200,
+    # 'batch_size':           20, 
+    # 'epochs':               10001,
+    # 'test_epochs':          10,
+
+    # Training specific parameters
+    # 'learning_rate':        0.0005,
+    # 'scheduler_step':       5,
+    # 'scheduler_gamma':      0.99,
+    # 'weight_decay':         1e-4,                    # Weight decay
+
     'display_predictions':  False,
     'save_model':           True,
     'load_model':           False,
     'model_path':           'Models/model.pt',      # Path to model file if loading model
     'min_max_norm':         False,
 
+
     'loss_fn':              'L1',                   # Loss function to use - L1, L2
-    'filepath':             '/hdd/mmichelis/VNO_data/elasticity/',  # Path to data
+    #'datapath':             '/hdd/mmichelis/VNO_data/elasticity/',  # Path to data
+
+    # Specifically for Burgers
+    'data_dist':            'uniform',              # Data distribution to use - uniform, cubic_from_conexp, random
 }
 
 
@@ -60,13 +68,26 @@ def train (configs):
     print(configs)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     
-    getDataloaders = importlib.import_module(configs['experiment']+'.dataset').getDataloaders
-    if configs['model'] == 'fno':
-        Model = importlib.import_module(configs['experiment']+'.architectures').FNO
-    elif configs['model'] == 'ffno':
-        Model = importlib.import_module(configs['experiment']+'.architectures').FFNO
-    else:
-        raise ValueError('Model not recognized.')
+    ### Load Model
+    try:
+        if configs['model'].lower() == 'fno':
+            Model = importlib.import_module(configs['experiment']+'.architectures').FNO
+        elif configs['model'].lower() == 'ffno':
+            Model = importlib.import_module(configs['experiment']+'.architectures').FFNO
+        else:
+            raise ValueError('Model not recognized.')
+        
+        # Replace default configs with experiment specific configs if not specified.
+        for key in Model.configs:
+            configs.setdefault(key, Model.configs[key])
+    except:
+        raise ValueError('Model not compatible with experiment.')
+    
+    ### Load Dataset
+    try:
+        getDataloaders = importlib.import_module(configs['experiment']+'.dataset').getDataloaders
+    except:
+        raise ValueError('Experiment not recognized.')
 
     
     #######
@@ -80,7 +101,7 @@ def train (configs):
     
 
     print(f"Number of trainable parameters: {count_params(model)}")
-    optimizer = Adam(model.parameters(), lr=configs['learning_rate'], weight_decay=1e-4)
+    optimizer = Adam(model.parameters(), lr=configs['learning_rate'], weight_decay=configs['weight_decay'])
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=configs['scheduler_step'], gamma=configs['scheduler_gamma'])
     # Define the loss function
     if configs['loss_fn'] == 'L1':
@@ -195,4 +216,12 @@ def train (configs):
 
 
 if __name__=='__main__':
+    ### Set random seed for reproducibility
+    seed = 0
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+
+    ### Run training for single sample
     train(configs)
