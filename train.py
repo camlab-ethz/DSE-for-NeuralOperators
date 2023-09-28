@@ -44,6 +44,16 @@ configs = {
     'load_model':           False,                      # Whether to load a pretrained model or not, need to specify the model_path then.
     'model_path':           '_Models/model.pt',         # Path to model file if loading model
 
+    
+    ### Model specific parameters
+    # 'modes1':               12,                       # Number of x-modes to use in the Fourier layer
+    # 'modes2':               12,                       # Number of y-modes to use in the Fourier layer
+    # 'width':                32,                       # Number of channels in the convolutional layers
+    # 'in_channels':          2,                        # Number of channels in input linear layer
+    # 'out_channels':         1,                        # Number of channels in output linear layer
+    # 'is_mesh':              True,                     # Is it a mesh?
+    # 's1':                   40,                       # Number of x-points on latent space GeoFNO grid
+    # 's2':                   40,                       # Number of y-points on latent space GeoFNO grid
 
     ### Specifically for Burgers
     # 'data_dist':            'uniform',                # Data distribution to use - uniform, cubic_from_conexp, random
