@@ -17,7 +17,7 @@ from .geo_fno import IPHI
 
 
 ################################################################
-# Geo FFNO
+# Geo FFNO (WNLinear, FeedForward, FactorizedSpectralConv2d,  SpectralConv2d_FFNO, IPHI same as Elasticity)
 ################################################################
 class WNLinear (nn.Linear):
     def __init__(self, in_features: int, out_features: int, bias: bool = True, device=None, dtype=None, wnorm=False):
@@ -318,16 +318,17 @@ class SpectralConv2d_FFNO (nn.Module):
 class Geo_FFNO (nn.Module):
     # Set a class attribute for the default configs.
     configs = {
-        'num_train':            1000,
-        'num_test':             200,
+        'num_train':            1500,
+        'num_test':             300,
         'batch_size':           20, 
         'epochs':               501,
         'test_epochs':          10,
 
-        'datapath':             "_Data/Elasticity/",  # Path to data
+        'datapath':             "_Data/Airfoil/",  # Path to data
+        'data_small_domain':    True,              # Whether to use a small domain or not for specifically the Airfoil experiment
 
         # Training specific parameters
-        'learning_rate':        0.001,
+        'learning_rate':        0.005,
         'scheduler_step':       10,
         'scheduler_gamma':      0.97,
         'weight_decay':         1e-4,                   # Weight decay
@@ -420,8 +421,7 @@ class Geo_FFNO (nn.Module):
         # xi (batch, xi1, xi2, 2) the computational mesh (uniform)
         # x_in (batch, Nx, 2) the input mesh (query mesh)
         
-        _, u = x
-        # We assume for FFNO no "code" for the Diffeomorphism
+        u = x
         code = None
         x_in, x_out = None, None
 
