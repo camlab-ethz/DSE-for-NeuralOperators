@@ -12,9 +12,12 @@ Similarly, the trained models that we used in the paper can be found here:
 
 ## Training
 
-We formatted the models to be run easily from the `train.py` script. Select the model you wish to run (options `fno`, `ffno`, `ufno`, `geo_fno`, `geo_ffno`, `geo_ufno`, `fno_smm`, `ffno_smm`, `ufno_smm`) and the according experiments (options `Burgers`, `Elasticity`). Some experiments will require certain models to be used, for example, point-cloud data such as airfoil or elasticity require `geo_fno` or one of its variants as opposed to `fno`.
+We formatted the models to be run easily from the `train.py` script. Select the model you wish to run (options `fno`, `ffno`, `ufno`, `geo_fno`, `geo_ffno`, `geo_ufno`, `fno_smm`, `ffno_smm`, `ufno_smm`) and the according experiments (options `Burgers`, `Elasticity`). Some experiments will require certain models to be used, for example, point-cloud data such as airfoil or elasticity require `geo_fno` or one of its variants as opposed to `fno`. 
 
 The best hyperparameters are chosen by default, when the configs in `train.py` are left empty. These are defined in the separate model architectures of each experiment. You can choose to overwrite these by adding corresponding entries in the configs.
+
+
+The code for the spherical shallow water equations are based on a different setup, which can be run directly from the files (`fno.py`,`sfno.py`,`fno_smm.py`,`fno_smm.py`)
 
 
 ## Hyperparameter Sweep
