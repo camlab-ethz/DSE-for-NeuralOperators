@@ -7,8 +7,6 @@ from torch.utils.data import TensorDataset
 import numpy as np
 
 
-from _Utilities.utilities import MatReader, normalize
-
 
 def getDataloaders (configs):
     """
@@ -30,9 +28,7 @@ def getDataloaders (configs):
 
     data_path = configs['data_path']
     
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    
-    load_mod = LoadShearflow(ntrain, ntest, file=file_path)
+    load_mod = LoadShearflow(ntrain, ntest, file=data_path)
     train_a, train_u, test_a, test_u = load_mod.return_data()
 
     if configs['ShearLayer_SMM']:

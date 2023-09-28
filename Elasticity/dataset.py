@@ -3,6 +3,7 @@
 import torch
 import numpy as np
 
+from _Utilities.utilities import normalize
 
 
 class Dataset (torch.utils.data.Dataset):
@@ -31,25 +32,34 @@ def getDataloaders (configs):
     path_XY = configs['datapath']+'/Meshes/Random_UnitCell_XY_10.npy'
     path_Sigma = configs['datapath']+'/Meshes/Random_UnitCell_sigma_10.npy'
 
-    input_rr = np.load(path_rr)
+    input_rr = np.load(path_rr, allow_pickle=True)
     input_rr = torch.tensor(input_rr, dtype=torch.float).permute(1,0)
-    input_xy = np.load(path_XY)
+    input_xy = np.load(path_XY, allow_pickle=True)
     input_xy = torch.tensor(input_xy, dtype=torch.float).permute(2,0,1)
-    input_s = np.load(path_Sigma)
+    input_s = np.load(path_Sigma, allow_pickle=True)
     input_s = torch.tensor(input_s, dtype=torch.float).permute(1,0).unsqueeze(-1)
 
-    # normalize unnecessary
+    # normalize unnecessary for GeoFNO and GeoUFNO, for the others only normalize the output Sigma
+    if configs['model'] != 'geo_fno' and configs['model'] != 'geo_ufno':
+        min_s = torch.min(input_s)
+        max_s = torch.max(input_s)
+        def normalizer (sigma):
+            return (sigma - min_s) / (max_s - min_s)
+        def denormalizer (sigma):
+            return sigma * (max_s - min_s) + min_s
 
     train_rr = input_rr[:configs['num_train']]
     test_rr = input_rr[-configs['num_test']:]
-    train_s = input_s[:configs['num_train']]
-    test_s = input_s[-configs['num_test']:]
     train_xy = input_xy[:configs['num_train']]
     test_xy = input_xy[-configs['num_test']:]
+    train_s = input_s[:configs['num_train']]
+    test_s = input_s[-configs['num_test']:]
 
 
     train_loader = torch.utils.data.DataLoader(Dataset(train_rr, train_xy, train_s), batch_size=configs['batch_size'], shuffle=True)
     test_loader = torch.utils.data.DataLoader(Dataset(test_rr, test_xy, test_s), batch_size=1, shuffle=False)
+
+    train_loader.denormalizer = denormalizer    # TODO UGLY
 
     return train_loader, test_loader
 

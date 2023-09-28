@@ -25,10 +25,10 @@ import importlib
 ################################################################
 # TODO: Just give all possible options in comments for the config.
 configs = {
-    'model':                'fno',                  # Model to train - fno, fno_smm, ffno, ffno_smm, ufno, ufno_smm
-    'experiment':           'ShearLayer',           # Burgers, Elasticity        
-    'num_train':            1,
-    'num_test':             0,
+    'model':                'geo_ffno',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
+    'experiment':           'Elasticity',               # Burgers, Elasticity, ShearLayer   
+    # 'num_train':            1000,
+    # 'num_test':             20,
     # 'batch_size':           20, 
     # 'epochs':               10001,
     # 'test_epochs':          10,
@@ -45,7 +45,7 @@ configs = {
     'model_path':           '_Models/model.pt',      # Path to model file if loading model
     'min_max_norm':         False,
 
-
+    'device':               torch.device('cuda'),   # Define device for training & inference - GPU/CPU
     'loss_fn':              'L2',                   # Loss function to use - L1, L2
     #'datapath':             '/hdd/mmichelis/VNO_data/elasticity/',  # Path to data
 
@@ -77,7 +77,7 @@ def train (configs):
         relative_median_error_hist (list): The median (over test dataset) relative error for each epoch.
     """
     print(configs)
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = configs['device']
     
     ### Load Model
     try:
@@ -104,13 +104,15 @@ def train (configs):
             Model = importlib.import_module(configs['experiment']+'.architectures').FFNO_SMM
         elif configs['model'].lower() == 'ufno_smm':
             Model = importlib.import_module(configs['experiment']+'.architectures').UFNO_SMM
+
         else:
             raise ValueError('Model not recognized.')
         
         # Replace default configs with experiment specific configs if not specified.
         for key in Model.configs:
             configs.setdefault(key, Model.configs[key])
-    except:
+    except Exception as error:
+        print(error)
         raise ValueError('Model not compatible with experiment.')
     
     ### Load Dataset
@@ -131,6 +133,7 @@ def train (configs):
     train_loader, test_loader = getDataloaders(configs)
     ### TODO TEMPORARY, unlikely good idea to put point dataset into dictionary
     configs['point_data'] = None if not hasattr(train_loader, "point_data") else train_loader.point_data
+    configs['denormalizer'] = None if not hasattr(train_loader, "denormalizer") else train_loader.denormalizer
     
     print(f'Processing finished in {time.time()-start_time:.2f}s.')
 
