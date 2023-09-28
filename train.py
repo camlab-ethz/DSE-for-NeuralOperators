@@ -20,8 +20,8 @@ from _Utilities.utilities import count_params, percentage_difference
 ################################################################
 # TODO: Just give all possible options in comments for the config.
 configs = {
-    'model':                'ufno_smm',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
-    'experiment':           'ShearLayer',               # Burgers, Elasticity, Airfoil, ShearLayer   
+    'model':                'fno',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
+    'experiment':           'Humidity',               # Burgers, Elasticity, Airfoil, ShearLayer, Humidity
     # 'num_train':            1000,
     # 'num_test':             20,
     # 'batch_size':           20, 
@@ -41,10 +41,10 @@ configs = {
     'min_max_norm':         False,
     # 'data_small_domain':    True,              # Whether to use a small domain or not for specifically the Airfoil experiment
 
-    'device':               torch.device('cuda'),   # Define device for training & inference - GPU/CPU
-    'iphi_loss_reg':        0.0,                    # Regularization parameter for IPHI loss term
-    'loss_fn':              'L1',                   # Loss function to use - L1, L2
-    #'datapath':             '/hdd/mmichelis/VNO_data/elasticity/',  # Path to data
+    'device':               torch.device('cuda'),     # Define device for training & inference - GPU/CPU
+    # 'iphi_loss_reg':        0.0,                    # Regularization parameter for IPHI loss term
+    # 'loss_fn':              'L1',                   # Loss function to use - L1, L2
+    # 'datapath':             '_Data/Elasticity/',    # Path to data
 
     # Specifically for Burgers
     # 'data_dist':            'uniform',              # Data distribution to use - uniform, cubic_from_conexp, random
@@ -54,6 +54,10 @@ configs = {
     # 'center_2':         768,                        # Center of bottom interface
     # 'uniform':          100,                        # Number of points uniform along interface
     # 'growth':           1.0,                        # Growth factor, how quickly do points become sparse
+
+    # Specifically for Humidity
+    # 'center_lat':       180,                        # Lattitude center of the nonuniform sampling region
+    # 'center_lon':       140,                        # Longitude center of the nonuniform sampling region
 }
 
 

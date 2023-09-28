@@ -38,12 +38,16 @@ def getDataloaders (configs):
         x_pos = torch.tensor(load_mod.lat, dtype=torch.float)[0,:]
     else:
         sparsify = MakeSparse2D(train_in.shape[2], train_in.shape[1])
-        x_pos, y_pos = sparsify.generate_ce_distribution(growth, growth, center_lat, center_lon, uniform, uniform)[:2]
+        x_pos, y_pos, nleft, nbelow = sparsify.generate_ce_distribution(growth, growth, center_lat, center_lon, uniform, uniform)
+        train_in = sparsify.get_sparse_data(train_in, x_pos, y_pos)
+        train_out = sparsify.get_sparse_data(train_out, x_pos, y_pos)
+        test_in = sparsify.get_sparse_data(test_in, x_pos, y_pos)
+        test_out = sparsify.get_sparse_data(test_out, x_pos, y_pos)
 
-        l = center_lat - uniform // 2
-        r = center_lat + uniform // 2
-        b = center_lon - uniform // 2
-        t = center_lon + uniform // 2
+        l = nleft
+        r = nleft+uniform
+        b = nbelow
+        t = nbelow+uniform
 
         # Testing will always be performed on a smaller region
         test_in = test_in[:, b:t, l:r,:]

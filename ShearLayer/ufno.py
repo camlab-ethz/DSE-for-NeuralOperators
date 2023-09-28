@@ -69,7 +69,7 @@ class UFNO(nn.Module):
         'epochs':               101,
         'test_epochs':          10,
 
-        'datapath':             "_Data/ShearLayer/",    # Path to data
+        'datapath':             "_Data/ShearLayer/ddsl_1024/",    # Path to data
 
         # Training specific parameters
         'learning_rate':        0.005,
