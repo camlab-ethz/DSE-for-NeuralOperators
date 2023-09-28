@@ -4,6 +4,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+
+################################################################
+# FFNO_SMM (FVFT, SpectralConv2d_SMM, FFNO_SMM same as Elasticity)
+################################################################
+
 # class for fully nonequispaced 2d points, using the F-FNO approach
 class FVFT:
     def __init__(self, x_positions, y_positions, modes):
@@ -57,8 +62,6 @@ class SpectralConv2d_SMM (nn.Module):
         self.modes1 = modes1 #Number of Fourier modes to multiply, at most floor(N/2) + 1
         self.modes2 = modes2
 
-        # pdb.set_trace()
-
         self.scale = (1 / (in_channels * out_channels))
         self.weights1 = nn.Parameter(
             self.scale * torch.rand(in_channels, out_channels, self.modes1, dtype=torch.cfloat))
@@ -103,13 +106,14 @@ class SpectralConv2d_SMM (nn.Module):
 class FFNO_SMM (nn.Module):
     # Set a class attribute for the default configs.
     configs = {
-        'num_train':            1000,
-        'num_test':             200,
+        'num_train':            1500,
+        'num_test':             300,
         'batch_size':           20, 
         'epochs':               501,
         'test_epochs':          10,
 
-        'datapath':             "_Data/Elasticity/",  # Path to data
+        'datapath':             "_Data/Airfoil/",  # Path to data
+        'data_small_domain':    True,              # Whether to use a small domain or not for specifically the Airfoil experiment
 
         # Training specific parameters
         'learning_rate':        0.005,
@@ -155,32 +159,30 @@ class FFNO_SMM (nn.Module):
         self.fc2 = nn.Linear(128, 1)
 
     def forward (self, x):
-        # Elasticity has these two as inputs
-        code, x = x
-        transformer = FVFT(x[:,:,0], x[:,:,1], self.modes1)
+        transform = FVFT(x[:,:,0], x[:,:,1], self.modes1)
 
         x = self.fc0(x)
         x = x.permute(0, 2, 1)
 
-        x1 = self.conv0(x, transformer)
+        x1 = self.conv0(x, transform)
         x2 = self.w01(x1)
         x3 = F.gelu(x2)
         x4 = self.w02(x3)
         x = F.gelu(x4) + x
 
-        x1 = self.conv0(x, transformer)
+        x1 = self.conv0(x, transform)
         x2 = self.w11(x1)
         x3 = F.gelu(x2)
         x4 = self.w12(x3)
         x = F.gelu(x4) + x
 
-        x1 = self.conv0(x, transformer)
+        x1 = self.conv0(x, transform)
         x2 = self.w21(x1)
         x3 = F.gelu(x2)
         x4 = self.w22(x3)
         x = F.gelu(x4) + x
 
-        x1 = self.conv0(x, transformer)
+        x1 = self.conv0(x, transform)
         x2 = self.w31(x1)
         x3 = F.gelu(x2)
         x4 = self.w32(x3)
@@ -192,5 +194,4 @@ class FFNO_SMM (nn.Module):
         x = F.gelu(x)
         x = self.fc2(x)
         
-        x = self.denormalizer(x) 
         return x

@@ -157,30 +157,30 @@ class FFNO_SMM (nn.Module):
     def forward (self, x):
         # Elasticity has these two as inputs
         code, x = x
-        transformer = FVFT(x[:,:,0], x[:,:,1], self.modes1)
+        transform = FVFT(x[:,:,0], x[:,:,1], self.modes1)
 
         x = self.fc0(x)
         x = x.permute(0, 2, 1)
 
-        x1 = self.conv0(x, transformer)
+        x1 = self.conv0(x, transform)
         x2 = self.w01(x1)
         x3 = F.gelu(x2)
         x4 = self.w02(x3)
         x = F.gelu(x4) + x
 
-        x1 = self.conv0(x, transformer)
+        x1 = self.conv0(x, transform)
         x2 = self.w11(x1)
         x3 = F.gelu(x2)
         x4 = self.w12(x3)
         x = F.gelu(x4) + x
 
-        x1 = self.conv0(x, transformer)
+        x1 = self.conv0(x, transform)
         x2 = self.w21(x1)
         x3 = F.gelu(x2)
         x4 = self.w22(x3)
         x = F.gelu(x4) + x
 
-        x1 = self.conv0(x, transformer)
+        x1 = self.conv0(x, transform)
         x2 = self.w31(x1)
         x3 = F.gelu(x2)
         x4 = self.w32(x3)

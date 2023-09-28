@@ -219,13 +219,14 @@ class U_net (nn.Module):
 class UFNO_SMM (nn.Module):
     # Set a class attribute for the default configs.
     configs = {
-        'num_train':            1000,
-        'num_test':             200,
+        'num_train':            1500,
+        'num_test':             300,
         'batch_size':           20, 
         'epochs':               501,
         'test_epochs':          10,
 
-        'datapath':             "_Data/Elasticity/",  # Path to data
+        'datapath':             "_Data/Airfoil/",  # Path to data
+        'data_small_domain':    True,              # Whether to use a small domain or not for specifically the Airfoil experiment
 
         # Training specific parameters
         'learning_rate':        0.005,
@@ -274,12 +275,12 @@ class UFNO_SMM (nn.Module):
         # Elasticity has these two as inputs
         code, x = x
         
-        transformer = UVFT(x[:,:,0], x[:,:,1], self.modes1)
+        transform = UVFT(x[:,:,0], x[:,:,1], self.modes1)
         x = self.fc0(x)
         x = x.permute(0, 2, 1)
         # x = F.pad(x, [0,self.padding, 0,self.padding]) # pad the domain if input is non-periodic
 
-        x1 = self.conv0(x, transformer)
+        x1 = self.conv0(x, transform)
         x2 = self.w0(x1)
         x = x1 + x2
         x = F.gelu(x)
@@ -301,7 +302,7 @@ class UFNO_SMM (nn.Module):
         x = x1 + x2 + x3 
         x = F.gelu(x)
 
-        x1 = self.conv4(x, transformer)
+        x1 = self.conv4(x, transform)
         x2 = self.w4(x1)
         x = x1 + x2
 
@@ -310,6 +311,5 @@ class UFNO_SMM (nn.Module):
         x = F.gelu(x)
         x = self.fc2(x)
         
-        x = self.denormalizer(x) 
         return x
 
