@@ -205,7 +205,7 @@ def train (configs):
     plt.ylabel('Log Loss')
     plt.legend()
     plt.grid()
-    plt.savefig(f"./models/loss_history.png")
+    plt.savefig(f"./Models/loss_history.png")
     plt.close()
 
     # Save Model
