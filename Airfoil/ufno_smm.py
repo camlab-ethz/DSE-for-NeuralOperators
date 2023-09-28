@@ -6,6 +6,13 @@ import torch.nn.functional as F
 import numpy as np
 
 
+
+
+################################################################
+# FFNO_SMM (UVFT, SpectralConv2d_last, SpectralConv2d, UNet same as Elasticity)
+# BUT NOTE: SpectralConv2d_first is different
+################################################################
+
 # class for fully nonequispaced 2d points for UFNO approach
 class UVFT:
     def __init__(self, x_positions, y_positions, modes):
@@ -53,8 +60,9 @@ class SpectralConv2d_first (nn.Module):
         self.modes1 = modes1 #Number of Fourier modes to multiply, at most floor(N/2) + 1
         self.modes2 = modes2
         
-        self.s1 = 32
-        self.s2 = 32
+        # TODO: Hardcoded values that actually differ to Elasticity.
+        self.s1 = 96
+        self.s2 = 96
 
         self.scale = (1 / (in_channels * out_channels))
         self.weights1 = nn.Parameter(
@@ -86,6 +94,7 @@ class SpectralConv2d_first (nn.Module):
         x = torch.fft.irfft2(out_ft, s=(self.s1, self.s2))
 
         return x
+
 
 class SpectralConv2d_last(nn.Module):
     def __init__(self, in_channels, out_channels, modes1, modes2):
@@ -126,6 +135,7 @@ class SpectralConv2d_last(nn.Module):
         x = x / x.size(-1) * 2
 
         return x.real
+
 
 class SpectralConv2d(nn.Module):
     def __init__(self, in_channels, out_channels, modes1, modes2):
@@ -216,6 +226,7 @@ class U_net (nn.Module):
         return nn.Conv2d(input_channels, output_channels, kernel_size=kernel_size,
                          stride=stride, padding=padding)
 
+
 class UFNO_SMM (nn.Module):
     # Set a class attribute for the default configs.
     configs = {
@@ -272,9 +283,6 @@ class UFNO_SMM (nn.Module):
         self.fc2 = nn.Linear(128, 1)
 
     def forward(self, x):
-        # Elasticity has these two as inputs
-        code, x = x
-        
         transform = UVFT(x[:,:,0], x[:,:,1], self.modes1)
         x = self.fc0(x)
         x = x.permute(0, 2, 1)
