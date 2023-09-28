@@ -20,7 +20,7 @@ from _Utilities.utilities import count_params, percentage_difference
 ################################################################
 # TODO: Just give all possible options in comments for the config.
 configs = {
-    'model':                'geo_ffno',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
+    'model':                'geo_ufno',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
     'experiment':           'Airfoil',               # Burgers, Elasticity, Airfoil, ShearLayer   
     # 'num_train':            1000,
     # 'num_test':             20,
@@ -69,7 +69,6 @@ def train (configs):
         relative_error_hist (list): The average (over test dataset) relative error for each epoch.
         relative_median_error_hist (list): The median (over test dataset) relative error for each epoch.
     """
-    print(configs)
     device = configs['device']
     
     ### Load Model
@@ -115,7 +114,8 @@ def train (configs):
         print(error)
         raise ValueError('Experiment not recognized.')
     
-    
+    # NOTE: Some configs will have been overwritten by the defaults in Model.configs, hence we print here!
+    print(configs)
 
     ##############
     # data loaders
@@ -179,7 +179,7 @@ def train (configs):
 
             # For diffeomorphisms, additional loss term:
             if hasattr(model, "model_iphi") and configs['iphi_loss_reg'] > 0:
-                samples_x = torch.rand(batch_size, targets.shape[1], 2).cuda() * 3 -1
+                samples_x = torch.rand(batch_size, targets.shape[1], 2).cuda() * 3 - 1 # TODO Hardcoded values, check if applies to all
                 samples_xi = model.model_iphi(samples_x)
                 loss += configs['iphi_loss_reg'] * loss_fn(samples_xi, samples_x)
 

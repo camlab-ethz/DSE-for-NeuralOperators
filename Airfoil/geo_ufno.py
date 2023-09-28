@@ -11,9 +11,8 @@ from .geo_fno import IPHI, SpectralConv2d
 
 
 ################################################################
-# Geo UFNO
+# Geo UFNO (UNet, SpectralConv2d, IPHI same as Elasticity)
 ################################################################
-
 class U_net (nn.Module):
     # the 2D U-Net
     def __init__(self, input_channels, output_channels, kernel_size, dropout_rate):
@@ -71,30 +70,33 @@ class U_net (nn.Module):
 class Geo_UFNO (nn.Module):
     # Set a class attribute for the default configs.
     configs = {
-        'num_train':            1000,
-        'num_test':             200,
+        'num_train':            1500,
+        'num_test':             300,
         'batch_size':           20, 
         'epochs':               501,
         'test_epochs':          10,
 
-        'datapath':             "_Data/Elasticity/",  # Path to data
+        'datapath':             "_Data/Airfoil/",  # Path to data
+        'data_small_domain':    True,              # Whether to use a small domain or not for specifically the Airfoil experiment
 
         # Training specific parameters
-        'learning_rate':        0.001,
-        'scheduler_step':       50,
-        'scheduler_gamma':      0.5,
+        'learning_rate':        0.005,
+        'scheduler_step':       10,
+        'scheduler_gamma':      0.97,
         'weight_decay':         1e-4,                   # Weight decay
         'loss_fn':              'L1',                   # Loss function to use - L1, L2
 
         # Model specific parameters
-        'modes1':               12,                     # Number of x-modes to use in the Fourier layer
-        'modes2':               12,                     # Number of y-modes to use in the Fourier layer
+        'modes1':               14,                     # Number of x-modes to use in the Fourier layer
+        'modes2':               14,                     # Number of y-modes to use in the Fourier layer
         'width':                32,                     # Number of channels in the convolutional layers
         'in_channels':          2,                      # Number of channels in input linear layer
         'out_channels':         1,                      # Number of channels in output linear layer
+        'n_layers':             4,                      # Number of layers in the network
         'is_mesh':              True,                     # Is it a mesh?
         's1':                   40,                     # Number of x-points on latent space GeoFNO grid
         's2':                   40,                     # Number of y-points on latent space GeoFNO grid
+        'share_weight':         False,                  # Share weights across dimensions
     }
     def __init__ (self, configs):
         super(Geo_UFNO, self).__init__()
@@ -139,7 +141,8 @@ class Geo_UFNO (nn.Module):
         # xi (batch, xi1, xi2, 2) the computational mesh (uniform)
         # x_in (batch, Nx, 2) the input mesh (query mesh)
 
-        code, u = x
+        u = x
+        code = None
         x_in, x_out = None, None
 
         if self.is_mesh and x_in == None:
