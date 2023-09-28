@@ -7,12 +7,12 @@ import torch.nn.functional as F
 
 
 ################################################################
-# FFNO (SpectralConv2d same as ShearLayer)
+# FFNO
 ################################################################
 class SpectralConv2d (nn.Module):
     def __init__(self, in_channels, out_channels, modes1, modes2):
         super(SpectralConv2d, self).__init__()
-
+        
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.modes1 = modes1 #Number of Fourier modes to multiply, at most floor(N/2) + 1
@@ -35,10 +35,10 @@ class SpectralConv2d (nn.Module):
         B, I, M, N = x.shape
 
         # # # Dimesion Y # # #
-        x_fty = torch.fft.fft(x, dim=-1, norm='ortho')
+        x_fty = torch.fft.rfft(x, dim=-1, norm='ortho')
         # x_ft.shape == [batch_size, in_dim, grid_size, grid_size // 2 + 1]
 
-        out_ft = x_fty.new_zeros(B, I, M, N)
+        out_ft = x_fty.new_zeros(B, I, M, N // 2 + 1)
         # out_ft.shape == [batch_size, in_dim, grid_size, grid_size // 2 + 1, 2]
 
         out_ft[:, :, :, :self.modes1] = torch.einsum(
@@ -46,14 +46,14 @@ class SpectralConv2d (nn.Module):
                 x_fty[:, :, :, :self.modes1],
                 torch.view_as_complex(self.fourier_weight_1))
 
-        xy = torch.fft.ifft(out_ft, n=N, dim=-1, norm='ortho')
+        xy = torch.fft.irfft(out_ft, n=N, dim=-1, norm='ortho')
         # x.shape == [batch_size, in_dim, grid_size, grid_size]
 
         # # # Dimesion X # # #
-        x_ftx = torch.fft.fft(x, dim=-2, norm='ortho')
+        x_ftx = torch.fft.rfft(x, dim=-2, norm='ortho')
         # x_ft.shape == [batch_size, in_dim, grid_size // 2 + 1, grid_size]
 
-        out_ft = x_ftx.new_zeros(B, I, M, N)
+        out_ft = x_ftx.new_zeros(B, I, M // 2 + 1, N)
         # out_ft.shape == [batch_size, in_dim, grid_size // 2 + 1, grid_size, 2]
 
         
@@ -62,7 +62,7 @@ class SpectralConv2d (nn.Module):
                 x_ftx[:, :, :self.modes1, :],
                 torch.view_as_complex(self.fourier_weight_2))
 
-        xx = torch.fft.ifft(out_ft, n=M, dim=-2, norm='ortho')
+        xx = torch.fft.irfft(out_ft, n=M, dim=-2, norm='ortho')
         # x.shape == [batch_size, in_dim, grid_size, grid_size]
 
         # # Combining Dimensions # #
