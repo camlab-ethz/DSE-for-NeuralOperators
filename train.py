@@ -20,7 +20,7 @@ from _Utilities.utilities import count_params, percentage_difference
 ################################################################
 # TODO: Just give all possible options in comments for the config.
 configs = {
-    'model':                'geo_ufno',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
+    'model':                'fno_smm',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
     'experiment':           'Airfoil',               # Burgers, Elasticity, Airfoil, ShearLayer   
     # 'num_train':            1000,
     # 'num_test':             20,

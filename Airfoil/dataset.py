@@ -37,14 +37,6 @@ def getDataloaders (configs):
     input_x = torch.flatten(input_x, start_dim=1, end_dim=2)
     input_y = torch.flatten(input_y, start_dim=1, end_dim=2)
     input_q = torch.flatten(input_q, start_dim=1, end_dim=2)
-
-    # Only denormalizer needed for models
-    min_s = torch.min(input_q)
-    max_s = torch.max(input_q)
-    def normalizer (field):
-        return (field - min_s) / (max_s - min_s)
-    def denormalizer (field):
-        return field * (max_s - min_s) + min_s
     
 
     inputs = torch.cat((input_x.unsqueeze(-1), input_y.unsqueeze(-1)), -1)
@@ -59,7 +51,6 @@ def getDataloaders (configs):
     train_loader = torch.utils.data.DataLoader(TensorDataset(train_in, train_out), batch_size=configs['batch_size'], shuffle=True)
     test_loader = torch.utils.data.DataLoader(TensorDataset(test_in, test_out), batch_size=1, shuffle=False)
 
-    train_loader.denormalizer = denormalizer    # TODO UGLY
 
     return train_loader, test_loader
 

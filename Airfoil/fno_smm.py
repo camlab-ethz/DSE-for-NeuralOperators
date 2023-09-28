@@ -6,6 +6,11 @@ import torch.nn.functional as F
 import numpy as np
 
 
+
+################################################################
+# FNO_SMM (VFT, SpectralConv2d_SMM, FNO_SMM same as Elasticity)
+################################################################
+
 # class for fully nonequispaced 2d points
 class VFT:
     def __init__(self, x_positions, y_positions, modes):
@@ -48,6 +53,10 @@ class SpectralConv2d_SMM (nn.Module):
     def __init__(self, in_channels, out_channels, modes1, modes2):
         super(SpectralConv2d_SMM, self).__init__()
 
+        """
+        2D Fourier layer. It does FFT, linear transform, and Inverse FFT.    
+        """
+
         self.in_channels = in_channels
         self.out_channels = out_channels
         self.modes1 = modes1 #Number of Fourier modes to multiply, at most floor(N/2) + 1
@@ -59,6 +68,12 @@ class SpectralConv2d_SMM (nn.Module):
         self.weights2 = nn.Parameter(
             self.scale * torch.rand(in_channels, out_channels, self.modes1, self.modes2, dtype=torch.cfloat))
 
+
+    # Complex multiplication and complex batched multiplications
+    def compl_mul1d(self, input, weights):
+        # (batch, in_channel, x ), (in_channel, out_channel, x) -> (batch, out_channel, x)
+        return torch.einsum("bix,iox->box", input, weights)
+
     # Complex multiplication
     def compl_mul2d(self, input, weights):
         # (batch, in_channel, x,y ), (in_channel, out_channel, x,y) -> (batch, out_channel, x,y)
@@ -66,12 +81,14 @@ class SpectralConv2d_SMM (nn.Module):
 
     def forward(self, x, transformer):
         batchsize = x.shape[0]
+        num_pts = x.shape[-1]
 
         x = x.permute(0, 2, 1)
-
+        
         #Compute Fourier coeffcients up to factor of e^(- something constant)
         x_ft = transformer.forward(x.cfloat()) #[4, 20, 32, 16]
-        x_ft = x_ft.permute(0, 2, 1)       
+        x_ft = x_ft.permute(0, 2, 1)
+        # out_ft = self.compl_mul1d(x_ft, self.weights3)
         x_ft = torch.reshape(x_ft, (batchsize, self.out_channels, 2*self.modes1, 2*self.modes1-1))
 
         # # Multiply relevant Fourier modes
@@ -87,6 +104,7 @@ class SpectralConv2d_SMM (nn.Module):
         x_ft = x_ft.permute(0, 2, 1)
         x = transformer.inverse(x_ft) # x [4, 20, 512, 512]
         x = x.permute(0, 2, 1)
+        x = x / x.size(-1) * 2
 
         return x.real
 
@@ -94,13 +112,14 @@ class SpectralConv2d_SMM (nn.Module):
 class FNO_SMM (nn.Module):
     # Set a class attribute for the default configs.
     configs = {
-        'num_train':            1000,
-        'num_test':             200,
+        'num_train':            1500,
+        'num_test':             300,
         'batch_size':           20, 
         'epochs':               501,
         'test_epochs':          10,
 
-        'datapath':             "_Data/Elasticity/",  # Path to data
+        'datapath':             "_Data/Airfoil/",  # Path to data
+        'data_small_domain':    True,              # Whether to use a small domain or not for specifically the Airfoil experiment
 
         # Training specific parameters
         'learning_rate':        0.005,
@@ -121,9 +140,6 @@ class FNO_SMM (nn.Module):
         self.modes2 = configs['modes2']
         self.width = configs['width']
         self.padding = 2 # pad the domain if input is non-periodic
-
-        # Predictions are normalized, we need the output denormalized
-        self.denormalizer = configs['denormalizer']
 
         
         self.fc0 = nn.Linear(2, self.width)
@@ -146,11 +162,6 @@ class FNO_SMM (nn.Module):
         self.fc2 = nn.Linear(128, 1)
 
     def forward(self, x):
-        # Elasticity has these two as inputs
-        code, x = x
-
-        # grid = self.get_grid(x.shape, x.device)
-        # x = torch.cat((x, grid), dim=-1)
         transform = VFT(x[:,:,0], x[:,:,1], self.modes1)
 
         x = self.fc0(x)
@@ -183,6 +194,5 @@ class FNO_SMM (nn.Module):
         x = F.gelu(x)
         x = self.fc2(x)
 
-        x = self.denormalizer(x) 
         return x
     
