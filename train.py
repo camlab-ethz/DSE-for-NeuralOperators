@@ -19,7 +19,7 @@ from _Utilities.utilities import count_params, percentage_difference
 # configs
 ################################################################
 configs = {
-    'model':                'fno_smm',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
+    'model':                'geo_fno',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
     'experiment':           'Airfoil',               # Burgers, Elasticity, Airfoil, ShearLayer, Humidity
     'device':               torch.device('cuda'),       # Define device for training & inference - GPU/CPU
 
@@ -30,7 +30,7 @@ configs = {
     # 'num_test':             20,                       # Number of test samples
     # 'batch_size':           20,                       # Batch size
     # 'epochs':               501,                      # Number of epochs
-    'test_epochs':          10,                       # How often we print test error during training
+    'test_epochs':          1,                       # How often we print test error during training
 
     ### Training specific parameters
     # 'learning_rate':        0.005,                    # Learning rate
@@ -57,7 +57,7 @@ configs = {
     # 's2':                   40,                       # Number of y-points on latent space GeoFNO grid
 
     ### Specifically for Burgers
-    # 'data_dist':            'uniform',                # Data distribution to use - uniform, cubic_from_conexp, random
+    # 'data_dist':            'cubic_from_conexp',                # Data distribution to use - uniform, conexp, cubic_from_conexp
 
     ### Specifically for Airfoil
     # 'data_small_domain':    True,                     # Whether to use a small domain or not for specifically the Airfoil experiment
@@ -165,7 +165,7 @@ def train (configs):
     if configs['loss_fn'] == 'L1':
         loss_fn = torch.nn.L1Loss()
     elif configs['loss_fn'] == 'L2':
-        loss_fn = torch.nn.MSELoss()
+        loss_fn = torch.nn.MSELoss('mean')
     else:
         raise ValueError('Loss function not recognized.')
 
@@ -271,7 +271,7 @@ def train (configs):
         relative_median_error_hist.append(torch.median(median_error))
 
 
-        print(f"Epoch [{epoch:03d}/{configs['epochs']-1}] in {stop_train-start_train:.2f}s with LR {scheduler.get_last_lr()[0]:.2e}: \tTrain loss {train_loss:.4e} \t- Test loss {test_loss:.4e} \t- Test Error {relative_error:.2f}% \t- Median Test Error {torch.median(median_error).item():.2f}%")
+        print(f"Epoch [{epoch:03d}/{configs['epochs']-1}] in {stop_train-start_train:.2f}s with LR {scheduler.get_last_lr()[0]:.2e}: \tTrain loss {train_loss:.4e} \t- Test loss {test_loss:.4e} \t- Test Error {relative_error:.2f}% \t- Median Test Error {torch.median(median_error).item():.4f}%")
         train_loss_hist.append(train_loss)
         test_loss_hist.append(test_loss)
 
@@ -297,7 +297,7 @@ def train (configs):
         # Remove unnecessary data from models
         best_model.point_data = None
         best_model.denormalizer = None
-        print(f"Experiment: {configs['experiment']} \t- Model: {configs['model']} \t- Error: {lowest_error:.2f}%")
+        print(f"Experiment: {configs['experiment']} \t- Model: {configs['model']} \t- Error: {lowest_error:.4f}%")
         torch.save(best_model, f"_Models/{configs['experiment']}_{configs['model']}.pt")
 
     return training_times, train_loss_hist, test_loss_hist, relative_error_hist, relative_median_error_hist
@@ -306,7 +306,7 @@ def train (configs):
 
 if __name__=='__main__':
     ### Set random seed for reproducibility
-    seed = 333
+    seed = 332
     torch.manual_seed(seed)
     np.random.seed(seed)
     torch.cuda.manual_seed(seed)

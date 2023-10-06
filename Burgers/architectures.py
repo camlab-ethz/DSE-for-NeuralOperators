@@ -206,7 +206,7 @@ class FNO_SMM (nn.Module):
         'scheduler_step':       10,
         'scheduler_gamma':      0.97,
         'weight_decay':         1e-5,                   # Weight decay
-        'loss_fn':              'L2',                   # Loss function to use - L1, L2
+        'loss_fn':              'L1',                   # Loss function to use - L1, L2
 
         # Model specific parameters
         'modes':                16,                     # Number of modes to use in the Fourier layer
@@ -218,7 +218,7 @@ class FNO_SMM (nn.Module):
 
         self.modes = configs['modes']
         self.width = configs['width']
-        self.padding = 2 # pad the domain if input is non-periodic
+        self.padding = 0 # pad the domain if input is non-periodic
         self.point_data = configs['point_data']
 
         # Define Structured Matrix Method
