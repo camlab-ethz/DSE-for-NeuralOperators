@@ -19,17 +19,18 @@ from _Utilities.utilities import count_params, percentage_difference
 # configs
 ################################################################
 configs = {
-    'model':                'geo_ufno',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
-    'experiment':           'Elasticity',               # Burgers, Elasticity, Airfoil, ShearLayer, Humidity
+    'model':                'fno_smm',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
+    'experiment':           'Airfoil',               # Burgers, Elasticity, Airfoil, ShearLayer, Humidity
     'device':               torch.device('cuda'),       # Define device for training & inference - GPU/CPU
 
     ### Data specific parameters
     # 'datapath':             '_Data/Elasticity/',      # Path to data
+    # 'datapath':             '~/data/elasticity',      # Path to data
     # 'num_train':            1000,                     # Number of training samples
     # 'num_test':             20,                       # Number of test samples
     # 'batch_size':           20,                       # Batch size
     # 'epochs':               501,                      # Number of epochs
-    # 'test_epochs':          10,                       # How often we print test error during training
+    'test_epochs':          10,                       # How often we print test error during training
 
     ### Training specific parameters
     # 'learning_rate':        0.005,                    # Learning rate
@@ -85,6 +86,7 @@ def train (configs):
         relative_median_error_hist (list): The median (over test dataset) relative error for each epoch.
     """
     device = configs['device']
+
     
     ### Load Model
     try:
@@ -96,7 +98,7 @@ def train (configs):
         elif configs['model'].lower() == 'ufno':
             Model = importlib.import_module(configs['experiment']+'.architectures').UFNO
 
-        ### Irregular Grids
+        ### Irregular Meshes
         elif configs['model'].lower() == 'geo_fno':
             Model = importlib.import_module(configs['experiment']+'.architectures').Geo_FNO
         elif configs['model'].lower() == 'geo_ffno':
@@ -176,6 +178,7 @@ def train (configs):
     test_loss_hist = []
     relative_error_hist = []
     relative_median_error_hist = []
+    
     for epoch in range(configs['epochs']):
         start_train = time.time()
         train_loss = 0
@@ -187,7 +190,7 @@ def train (configs):
             else:
                 inputs = inputs.to(device)
             targets = targets.to(device)
-
+            
             predictions = model(inputs)
 
             # Compute loss separate for complex numbers
@@ -214,6 +217,8 @@ def train (configs):
         train_loss /= configs['num_train']
         stop_train = time.time()
         training_times.append(stop_train-start_train)
+
+        scheduler.step()
         
         ### Only test every test_epochs epochs.
         if epoch % configs['test_epochs'] > 0:
@@ -265,7 +270,6 @@ def train (configs):
         relative_error_hist.append(relative_error)
         relative_median_error_hist.append(torch.median(median_error))
 
-        scheduler.step()
 
         print(f"Epoch [{epoch:03d}/{configs['epochs']-1}] in {stop_train-start_train:.2f}s with LR {scheduler.get_last_lr()[0]:.2e}: \tTrain loss {train_loss:.4e} \t- Test loss {test_loss:.4e} \t- Test Error {relative_error:.2f}% \t- Median Test Error {torch.median(median_error).item():.2f}%")
         train_loss_hist.append(train_loss)
@@ -302,11 +306,19 @@ def train (configs):
 
 if __name__=='__main__':
     ### Set random seed for reproducibility
-    seed = 0
+    seed = 333
     torch.manual_seed(seed)
     np.random.seed(seed)
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
 
-    ### Run training for single sample
+    ## Run training for single sample
     train(configs)
+
+    # Run training for multiple models: TODO figure out bug with copying parameters
+    # models = ['geo_fno', 'geo_ffno', 'geo_ufno', 'fno_smm', 'ffno_smm', 'ufno_smm']
+    # models = ['ffno_smm']
+    # for model in models:
+        # new_configs = configs
+        # new_configs['model'] = model
+        # train(new_configs)

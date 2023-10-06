@@ -13,12 +13,12 @@ import numpy as np
 
 # class for fully nonequispaced 2d points
 class VFT:
-    def __init__ (self, x_positions, y_positions, modes):
+    def __init__(self, x_positions, y_positions, modes):
         # it is important that positions are scaled between 0 and 2*pi
         x_positions -= torch.min(x_positions)
-        self.x_positions = x_positions * 6.28 / torch.max(x_positions)
+        self.x_positions = x_positions * 6.28 / (torch.max(x_positions))
         y_positions -= torch.min(y_positions)
-        self.y_positions = y_positions * 6.28 / torch.max(y_positions)
+        self.y_positions = y_positions * 6.28 / (torch.max(y_positions))
         self.number_points = x_positions.shape[1]
         self.batch_size = x_positions.shape[0]
         self.modes = modes
@@ -33,7 +33,7 @@ class VFT:
         m = (self.modes*2)*(self.modes*2-1)
         X_mat = torch.bmm(self.X_, self.x_positions[:,None,:]).repeat(1, (self.modes*2-1), 1)
         Y_mat = (torch.bmm(self.Y_, self.y_positions[:,None,:]).repeat(1, 1, self.modes*2).reshape(self.batch_size,m,self.number_points))
-        forward_mat = torch.exp(-1j* (X_mat+Y_mat)) / np.sqrt(self.number_points) * np.sqrt(2)
+        forward_mat = torch.exp(-1j* (X_mat+Y_mat)) 
 
         inverse_mat = torch.conj(forward_mat.clone()).permute(0,2,1)
 
@@ -122,9 +122,9 @@ class FNO_SMM (nn.Module):
         'data_small_domain':    True,              # Whether to use a small domain or not for specifically the Airfoil experiment
 
         # Training specific parameters
-        'learning_rate':        0.005,
-        'scheduler_step':       10,
-        'scheduler_gamma':      0.97,
+        'learning_rate':        0.001,
+        'scheduler_step':       50,
+        'scheduler_gamma':      0.5,
         'weight_decay':         1e-4,                   # Weight decay
         'loss_fn':              'L1',                   # Loss function to use - L1, L2
 
@@ -139,7 +139,7 @@ class FNO_SMM (nn.Module):
         self.modes1 = configs['modes1']
         self.modes2 = configs['modes2']
         self.width = configs['width']
-        self.padding = 2 # pad the domain if input is non-periodic
+        self.padding = 0 # pad the domain if input is non-periodic
 
         
         self.fc0 = nn.Linear(2, self.width)
@@ -153,10 +153,6 @@ class FNO_SMM (nn.Module):
         self.w1 = nn.Conv1d(self.width, self.width, 1)
         self.w2 = nn.Conv1d(self.width, self.width, 1)
         self.w3 = nn.Conv1d(self.width, self.width, 1)
-        # self.bn0 = torch.nn.BatchNorm2d(self.width)
-        # self.bn1 = torch.nn.BatchNorm2d(self.width)
-        # self.bn2 = torch.nn.BatchNorm2d(self.width)
-        # self.bn3 = torch.nn.BatchNorm2d(self.width)
 
         self.fc1 = nn.Linear(self.width, 128)
         self.fc2 = nn.Linear(128, 1)

@@ -119,9 +119,10 @@ class FFNO_SMM (nn.Module):
         'loss_fn':              'L1',                   # Loss function to use - L1, L2
 
         # Model specific parameters
-        'modes1':               12,                     # Number of x-modes to use in the Fourier layer
-        'modes2':               12,                     # Number of y-modes to use in the Fourier layer
-        'width':                32,                     # Number of channels in the convolutional layers
+        # Due to the differences in the setup, we have to use a larger number of modes and width to have a model of approximatley the same size as the geo_ffno
+        'modes1':               15,                     # Number of x-modes to use in the Fourier layer
+        'modes2':               15,                     # Number of y-modes to use in the Fourier layer
+        'width':                64,                     # Number of channels in the convolutional layers
     }
     def __init__ (self, configs):
         super(FFNO_SMM, self).__init__()
@@ -168,19 +169,19 @@ class FFNO_SMM (nn.Module):
         x4 = self.w02(x3)
         x = F.gelu(x4) + x
 
-        x1 = self.conv0(x, transform)
+        x1 = self.conv1(x, transform)
         x2 = self.w11(x1)
         x3 = F.gelu(x2)
         x4 = self.w12(x3)
         x = F.gelu(x4) + x
 
-        x1 = self.conv0(x, transform)
+        x1 = self.conv2(x, transform)
         x2 = self.w21(x1)
         x3 = F.gelu(x2)
         x4 = self.w22(x3)
         x = F.gelu(x4) + x
 
-        x1 = self.conv0(x, transform)
+        x1 = self.conv3(x, transform)
         x2 = self.w31(x1)
         x3 = F.gelu(x2)
         x4 = self.w32(x3)

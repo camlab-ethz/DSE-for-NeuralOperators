@@ -328,19 +328,20 @@ class Geo_FFNO (nn.Module):
 
         # Training specific parameters
         'learning_rate':        0.001,
-        'scheduler_step':       10,
-        'scheduler_gamma':      0.97,
+        'scheduler_step':       50,
+        'scheduler_gamma':      0.5,
         'weight_decay':         1e-4,                   # Weight decay
         'loss_fn':              'L1',                   # Loss function to use - L1, L2
+        'iphi_loss_reg':        0.1,                   # the iphi loss weight
 
         # Model specific parameters
-        'modes1':               14,                     # Number of x-modes to use in the Fourier layer
-        'modes2':               14,                     # Number of y-modes to use in the Fourier layer
+        'modes1':               12,                     # Number of x-modes to use in the Fourier layer
+        'modes2':               12,                     # Number of y-modes to use in the Fourier layer
         'width':                32,                     # Number of channels in the convolutional layers
         'in_channels':          2,                      # Number of channels in input linear layer
         'out_channels':         1,                      # Number of channels in output linear layer
         'n_layers':             4,                      # Number of layers in the network
-        'is_mesh':              True,                     # Is it a mesh?
+        'is_mesh':              True,                   # Is it a mesh?
         's1':                   40,                     # Number of x-points on latent space GeoFNO grid
         's2':                   40,                     # Number of y-points on latent space GeoFNO grid
         'share_weight':         False,                  # Share weights across dimensions
@@ -369,6 +370,7 @@ class Geo_FFNO (nn.Module):
         self.convs = nn.ModuleList([])
         self.ws = nn.ModuleList([])
         self.bs = nn.ModuleList([])
+
 
         self.fourier_weight = None
         if configs['share_weight']:
@@ -478,3 +480,4 @@ class Geo_FFNO (nn.Module):
         gridy = gridy.reshape(1, 1, size_y, 1).repeat(
             [batchsize, size_x, 1, 1])
         return torch.cat((gridx, gridy), dim=-1).to(device)
+

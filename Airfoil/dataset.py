@@ -14,9 +14,9 @@ def getDataloaders (configs):
         train_loader (torch.utils.data.DataLoader): train dataloader
         test_loader (torch.utils.data.DataLoader): test dataloader
     """
-    path_X = configs['datapath']+'/NACA_Cylinder_X.npy'
-    path_Y = configs['datapath']+'/NACA_Cylinder_Y.npy'
-    path_Q = configs['datapath']+'/NACA_Cylinder_Q.npy'
+    path_X = configs['datapath']+'NACA_Cylinder_X.npy'
+    path_Y = configs['datapath']+'NACA_Cylinder_Y.npy'
+    path_Q = configs['datapath']+'NACA_Cylinder_Q.npy'
 
     input_x = np.load(path_X, allow_pickle=True)
     input_x = torch.tensor(input_x, dtype=torch.float)

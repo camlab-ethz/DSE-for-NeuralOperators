@@ -240,9 +240,9 @@ class UFNO_SMM (nn.Module):
         'data_small_domain':    True,              # Whether to use a small domain or not for specifically the Airfoil experiment
 
         # Training specific parameters
-        'learning_rate':        0.005,
-        'scheduler_step':       10,
-        'scheduler_gamma':      0.97,
+        'learning_rate':        0.001,
+        'scheduler_step':       50,
+        'scheduler_gamma':      0.5,
         'weight_decay':         1e-4,                   # Weight decay
         'loss_fn':              'L1',                   # Loss function to use - L1, L2
 

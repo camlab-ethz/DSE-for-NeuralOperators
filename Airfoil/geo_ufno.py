@@ -80,15 +80,15 @@ class Geo_UFNO (nn.Module):
         'data_small_domain':    True,              # Whether to use a small domain or not for specifically the Airfoil experiment
 
         # Training specific parameters
-        'learning_rate':        0.005,
-        'scheduler_step':       10,
-        'scheduler_gamma':      0.97,
+        'learning_rate':        0.001,
+        'scheduler_step':       50,
+        'scheduler_gamma':      0.5,
         'weight_decay':         1e-4,                   # Weight decay
         'loss_fn':              'L1',                   # Loss function to use - L1, L2
 
         # Model specific parameters
-        'modes1':               14,                     # Number of x-modes to use in the Fourier layer
-        'modes2':               14,                     # Number of y-modes to use in the Fourier layer
+        'modes1':               12,                     # Number of x-modes to use in the Fourier layer
+        'modes2':               12,                     # Number of y-modes to use in the Fourier layer
         'width':                32,                     # Number of channels in the convolutional layers
         'in_channels':          2,                      # Number of channels in input linear layer
         'out_channels':         1,                      # Number of channels in output linear layer
@@ -184,11 +184,11 @@ class Geo_UFNO (nn.Module):
         u = self.conv4(uc, x_out=x_out, iphi=self.model_iphi, code=code)
         u3 = self.b4(x_out.permute(0, 2, 1))
         u = u + u3
-        #[20, 32, 972]
+        
         u = u.permute(0, 2, 1)
-        u = self.fc1(u)     #[20, 972, 128]
+        u = self.fc1(u)     
         u = F.gelu(u)
-        u = self.fc2(u)     #[20, 972, 2]
+        u = self.fc2(u)     
         return u
 
     def get_grid(self, shape, device):

@@ -123,9 +123,9 @@ class FFNO_SMM (nn.Module):
         'loss_fn':              'L1',                   # Loss function to use - L1, L2
 
         # Model specific parameters
-        'modes1':               12,                     # Number of x-modes to use in the Fourier layer
-        'modes2':               12,                     # Number of y-modes to use in the Fourier layer
-        'width':                32,                     # Number of channels in the convolutional layers
+        'modes1':               15,                     # Number of x-modes to use in the Fourier layer
+        'modes2':               15,                     # Number of y-modes to use in the Fourier layer
+        'width':                64,                     # Number of channels in the convolutional layers
     }
     def __init__ (self, configs):
         super(FFNO_SMM, self).__init__()

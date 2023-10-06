@@ -228,7 +228,7 @@ class UFNO_SMM (nn.Module):
         'datapath':             "_Data/Elasticity/",  # Path to data
 
         # Training specific parameters
-        'learning_rate':        0.001,
+        'learning_rate':        0.005,
         'scheduler_step':       10,
         'scheduler_gamma':      0.97,
         'weight_decay':         1e-4,                   # Weight decay
