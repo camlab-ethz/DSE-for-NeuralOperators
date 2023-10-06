@@ -19,7 +19,7 @@ from _Utilities.utilities import count_params, percentage_difference
 # configs
 ################################################################
 configs = {
-    'model':                'geo_fno',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
+    'model':                'fno_smm',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
     'experiment':           'Airfoil',               # Burgers, Elasticity, Airfoil, ShearLayer, Humidity
     'device':               torch.device('cuda'),       # Define device for training & inference - GPU/CPU
 
@@ -306,7 +306,7 @@ def train (configs):
 
 if __name__=='__main__':
     ### Set random seed for reproducibility
-    seed = 332
+    seed = 333
     torch.manual_seed(seed)
     np.random.seed(seed)
     torch.cuda.manual_seed(seed)
