@@ -13,24 +13,24 @@ import importlib
 from _Utilities.Adam import Adam
 from _Utilities.utilities import count_params, percentage_difference
 
-
+import pdb
 
 ################################################################
 # configs
 ################################################################
 configs = {
     'model':                'fno_smm',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
-    'experiment':           'Airfoil',               # Burgers, Elasticity, Airfoil, ShearLayer, Humidity
+    'experiment':           'Burgers',               # Burgers, Elasticity, Airfoil, ShearLayer, Humidity
     'device':               torch.device('cuda'),       # Define device for training & inference - GPU/CPU
 
     ### Data specific parameters
     # 'datapath':             '_Data/Elasticity/',      # Path to data
-    # 'datapath':             '~/data/elasticity',      # Path to data
+    'datapath':             '../data/burgers/',      # Path to data
     # 'num_train':            1000,                     # Number of training samples
     # 'num_test':             20,                       # Number of test samples
-    # 'batch_size':           20,                       # Batch size
+    'batch_size':           1,                       # Batch size
     # 'epochs':               501,                      # Number of epochs
-    'test_epochs':          1,                       # How often we print test error during training
+    # 'test_epochs':          1,                       # How often we print test error during training
 
     ### Training specific parameters
     # 'learning_rate':        0.005,                    # Learning rate
@@ -41,7 +41,7 @@ configs = {
     # 'loss_fn':              'L1',                     # Loss function to use - L1, L2
 
     ### Saving and loading models
-    'save_model':           True,                       # Whether to save the model or not
+    'save_model':           False,                       # Whether to save the model or not
     'load_model':           False,                      # Whether to load a pretrained model or not, need to specify the model_path then.
     'model_path':           '_Models/model.pt',         # Path to model file if loading model
 
@@ -57,7 +57,7 @@ configs = {
     # 's2':                   40,                       # Number of y-points on latent space GeoFNO grid
 
     ### Specifically for Burgers
-    # 'data_dist':            'cubic_from_conexp',                # Data distribution to use - uniform, conexp, cubic_from_conexp
+    'data_dist':            'conexp',                # Data distribution to use - uniform, conexp, cubic_from_conexp
 
     ### Specifically for Airfoil
     # 'data_small_domain':    True,                     # Whether to use a small domain or not for specifically the Airfoil experiment
@@ -152,6 +152,7 @@ def train (configs):
     # model
     #######
     # initialize model
+    
     if configs['load_model']:
         model = torch.load(configs['model_path']).to(device)
     else:
@@ -178,7 +179,6 @@ def train (configs):
     test_loss_hist = []
     relative_error_hist = []
     relative_median_error_hist = []
-    
     for epoch in range(configs['epochs']):
         start_train = time.time()
         train_loss = 0
