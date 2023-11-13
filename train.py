@@ -28,7 +28,7 @@ configs = {
     'datapath':             '../data/burgers/',      # Path to data
     # 'num_train':            1000,                     # Number of training samples
     # 'num_test':             20,                       # Number of test samples
-    'batch_size':           1,                       # Batch size
+    # 'batch_size':           1,                       # Batch size
     # 'epochs':               501,                      # Number of epochs
     # 'test_epochs':          1,                       # How often we print test error during training
 

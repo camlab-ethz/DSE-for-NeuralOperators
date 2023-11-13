@@ -6,16 +6,17 @@ import torch.nn.functional as F
 import numpy as np
 
 # NUFFT imports
-import pycuda.autoinit
-from pycuda.gpuarray import to_gpu
-import pycuda.gpuarray as gpuarray
+# import pycuda.autoinit
+# from pycuda.gpuarray import to_gpu
+# import pycuda.gpuarray as gpuarray
 
-from cufinufft import cufinufft
+# from cufinufft import cufinufft
 
-from Burgers import nufft_utils
+# from Burgers import nufft_utils
 
 # Torch NUFFT imports
 import torchkbnufft as tkbn
+import matplotlib.pyplot as plt
 
 import pdb
 
@@ -31,7 +32,7 @@ class SpectralConv1d (nn.Module):
         self.modes = modes  #Number of Fourier modes to multiply, at most floor(N/2) + 1
         self.transform = transform
 
-        self.point_data = (point_data / (8192) * 2 * np.pi - np.pi).cuda()
+        self.point_data = (point_data / (8192) * 2 * np.pi).cuda()
         self.point_data = self.point_data[:,:,0]
 
         self.scale = (1 / (in_channels*out_channels))
@@ -39,8 +40,10 @@ class SpectralConv1d (nn.Module):
 
 
         # for the NUFFT comparison
-        self.adjkb_ob = tkbn.KbNufftAdjoint(im_size=(self.modes,)).cuda()
-        self.nufft_ob = tkbn.KbNufft(im_size=(self.modes,)).cuda()
+        self.adjkb_ob = tkbn.KbNufftAdjoint(im_size=(64,)).cuda()
+        self.nufft_ob = tkbn.KbNufft(im_size=(64,)).cuda()
+
+        self.toep_ob = tkbn.ToepNufft()
 
 
     # Complex multiplication and complex batched multiplications
@@ -49,52 +52,35 @@ class SpectralConv1d (nn.Module):
         return torch.einsum("bix,iox->box", input, weights)
 
     def forward(self, x):
-        # if self.transform is "SMM":
+        if self.transform is not None:
             # FNO SMM
-            # x_ft = self.transform.forward(x.cfloat())
-            # out_ft = self.compl_mul1d(x_ft, self.weights)
-            # x = self.transform.inverse(out_ft).real / x.size(-1) * 2
+            x_ft = self.transform.forward(x.cfloat())
+            out_ft = self.compl_mul1d(x_ft, self.weights)
+            x = self.transform.inverse(out_ft).real / x.size(-1) * 2
 
-        # if self.transform is "nufft_cuda":
-        #     dtype = np.float32
-        #     complex_dtype = nufft_utils._complex_dtype(dtype)
-
-        #     data = x.cpu().detach().numpy().astype(complex_dtype)
-        #     c_gpu = gpuarray.to_gpu(data)
-
-        #     k = self.point_data.numpy().astype(dtype)
-        #     k_gpu = gpuarray.to_gpu(k)
-
-        #     shape = (50, 64, self.modes)
-        #     fk_gpu = gpuarray.GPUArray(shape, dtype=complex_dtype)
-
-        #     pdb.set_trace()
-        #     plan = cufinufft(1, (self.modes,), n_trans = 50*64, dtype=dtype)
-        #     plan.set_pts(to_gpu(self.point_data.cpu().numpy().astype(dtype)))
-
-        #     plan.execute(c_gpu, fk_gpu)
-
-        #     x = fk_gpu.get()
-
-        if self.transform is not None: #"nufft_torch":
-            # klength = 64
-            # ktraj = np.stack(
-            #     (np.zeros(64), np.linspace(-np.pi, np.pi, klength))
-            # )
-            # ktraj = torch.tensor(ktraj, dtype=torch.float)
-            # nufft_ob = tkbn.KbNufft(im_size=(64,))
-            # k_data = nufft_ob(x, ktraj)
-
+            # Kaiser-Bessel NUFFT
+            # batchsize = x.shape[0]
+            # image = x.to(torch.cfloat)
             # omega = self.point_data
 
-            data = x.to(torch.cfloat)
-            omega = self.point_data
-            image = self.adjkb_ob(data, omega)
-            out_ft = self.compl_mul1d(image, self.weights)
-            x = self.nufft_ob(out_ft, omega).real
+            # image_ft = self.nufft_ob(image, omega)
+            # out_ft = torch.zeros(batchsize, self.out_channels, x.size(-1),  device=x.device, dtype=torch.cfloat)
+            # out_ft[:, :, :self.modes] = self.compl_mul1d(image_ft[:, :, :self.modes], self.weights)
+            # image_out = self.adjkb_ob(out_ft, omega) / 64
+            # x = image_out.real
 
-            
 
+            # Toeplitz NUFFT
+            # batchsize = x.shape[0]
+            # image = x.to(torch.cfloat)
+            # omega = self.point_data
+
+            # kernel = tkbn.calc_toeplitz_kernel(omega, im_size=(64,))
+            # image_out = self.toep_ob(image, kernel)/64
+            # out_ft = torch.zeros(batchsize, self.out_channels, x.size(-1),  device=x.device, dtype=torch.cfloat)
+            # out_ft[:, :, :+self.modes] = self.compl_mul1d(image_out[:, :, :self.modes], self.weights)
+            # image_back = self.toep_ob(out_ft, kernel)/(64)
+            # x = image_back.real
             
         else:
             # standard FNO

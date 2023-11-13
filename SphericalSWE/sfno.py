@@ -322,7 +322,6 @@ def main(train=True, load_checkpoint=False, enable_amp=False):
                     inp = sparsify.torch_interpolate_to_grid(inp_rand).cuda()
                     tar = sparsify.torch_interpolate_to_grid(tar_rand).cuda()
 
-
                     prd = model(inp)
                     for _ in range(nfuture):
                         prd = model(prd)
