@@ -141,10 +141,10 @@ class FNO (nn.Module):
         # Define network
         self.fc0 = nn.Linear(2, self.width) # input channel is 2: (a(x), x)
 
-        self.conv0 = SpectralConv1d(self.width, self.width, self.modes)
-        self.conv1 = SpectralConv1d(self.width, self.width, self.modes)
-        self.conv2 = SpectralConv1d(self.width, self.width, self.modes)
-        self.conv3 = SpectralConv1d(self.width, self.width, self.modes)
+        self.conv0 = SpectralConv1d(self.width, self.width, self.modes, configs['point_data'])
+        self.conv1 = SpectralConv1d(self.width, self.width, self.modes, configs['point_data'])
+        self.conv2 = SpectralConv1d(self.width, self.width, self.modes, configs['point_data'])
+        self.conv3 = SpectralConv1d(self.width, self.width, self.modes, configs['point_data'])
         self.w0 = nn.Conv1d(self.width, self.width, 1)
         self.w1 = nn.Conv1d(self.width, self.width, 1)
         self.w2 = nn.Conv1d(self.width, self.width, 1)

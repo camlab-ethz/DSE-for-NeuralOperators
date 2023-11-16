@@ -19,7 +19,7 @@ import pdb
 # configs
 ################################################################
 configs = {
-    'model':                'fno_smm',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
+    'model':                'fno',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
     'experiment':           'Burgers',               # Burgers, Elasticity, Airfoil, ShearLayer, Humidity
     'device':               torch.device('cuda'),       # Define device for training & inference - GPU/CPU
 
@@ -28,7 +28,7 @@ configs = {
     'datapath':             '../data/burgers/',      # Path to data
     # 'num_train':            1000,                     # Number of training samples
     # 'num_test':             20,                       # Number of test samples
-    # 'batch_size':           1,                       # Batch size
+    'batch_size':           50,                       # Batch size
     # 'epochs':               501,                      # Number of epochs
     # 'test_epochs':          1,                       # How often we print test error during training
 
@@ -57,7 +57,7 @@ configs = {
     # 's2':                   40,                       # Number of y-points on latent space GeoFNO grid
 
     ### Specifically for Burgers
-    'data_dist':            'conexp',                # Data distribution to use - uniform, conexp, cubic_from_conexp
+    'data_dist':            'uniform',                # Data distribution to use - uniform, conexp, cubic_from_conexp
 
     ### Specifically for Airfoil
     # 'data_small_domain':    True,                     # Whether to use a small domain or not for specifically the Airfoil experiment
@@ -227,6 +227,8 @@ def train (configs):
         ##########
         # testing
         ##########
+        iter = 0
+        start_test = time.time()
         with torch.no_grad():
             test_loss = 0
             relative_error = 0
@@ -264,11 +266,17 @@ def train (configs):
 
                 relative_error += percentage_difference(targets.reshape(batch_size, -1), predictions.reshape(batch_size, -1))
                 median_error[idx] = percentage_difference(targets.reshape(batch_size, -1), predictions.reshape(batch_size, -1))
+                iter+=1
+
+        print(iter)
 
         test_loss /= configs['num_test']
         relative_error /= configs['num_test']
         relative_error_hist.append(relative_error)
         relative_median_error_hist.append(torch.median(median_error))
+
+        stop_test = time.time()
+        print(f"Tested in {stop_test-start_test:.2f}s")
 
 
         print(f"Epoch [{epoch:03d}/{configs['epochs']-1}] in {stop_train-start_train:.2f}s with LR {scheduler.get_last_lr()[0]:.2e}: \tTrain loss {train_loss:.4e} \t- Test loss {test_loss:.4e} \t- Test Error {relative_error:.2f}% \t- Median Test Error {torch.median(median_error).item():.4f}%")
