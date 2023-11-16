@@ -317,12 +317,14 @@ def main(train=True, load_checkpoint=False, enable_amp=False):
             for inp, tar in dataloader:
                 # inp shape [batchsize, 3, 256, 512]
                 with amp.autocast(enabled=enable_amp):
+                    inp = inp.cuda()
+                    tar = tar.cuda()
 
-                    inp_rand = sparsify.get_random_sphere_data(inp, theta, phi)
-                    tar_rand = sparsify.get_random_sphere_data(tar, theta, phi)
+                    # inp_rand = sparsify.get_random_sphere_data(inp, theta, phi)
+                    # tar_rand = sparsify.get_random_sphere_data(tar, theta, phi)
 
-                    inp = sparsify.torch_interpolate_to_grid(inp_rand).cuda()
-                    tar = sparsify.torch_interpolate_to_grid(tar_rand).cuda()
+                    # inp = sparsify.torch_interpolate_to_grid(inp_rand).cuda()
+                    # tar = sparsify.torch_interpolate_to_grid(tar_rand).cuda()
 
 
                     prd = model(inp)
@@ -361,14 +363,18 @@ def main(train=True, load_checkpoint=False, enable_amp=False):
             valid_loss = 0
             model.eval()
             errors = torch.zeros((num_valid))
+            errors_rand = torch.zeros((num_valid))
             index = 0
             with torch.no_grad():
                 for inp, tar in dataloader:
-                    # inp_og = inp
-                    inp_rand = sparsify.get_random_sphere_data(inp, theta, phi)
+                    inp = inp.cuda()
+                    tar = tar.cuda()
+
+
+                    # inp_rand = sparsify.get_random_sphere_data(inp, theta, phi)
                     tar_rand = sparsify.get_random_sphere_data(tar, theta, phi)
 
-                    inp = sparsify.torch_interpolate_to_grid(inp_rand).cuda()
+                    # inp = sparsify.torch_interpolate_to_grid(inp_rand).cuda()
                     
 
                     prd = model(inp)
@@ -385,12 +391,13 @@ def main(train=True, load_checkpoint=False, enable_amp=False):
                     elif loss_fn == 'fluct':
                         loss = fluct_l2loss_sphere(solver, prd, tar, inp, relative=True)
                     elif loss_fn == 'l1':
-                        loss = l1_loss(prd_rand, tar_rand)
+                        loss = l1_loss(prd, tar)
+                        # loss = l1_loss(prd_rand, tar_rand)
                     else:
                         raise NotImplementedError(f'Unknown loss function {loss_fn}')
 
                     errors[4*index:4*(index+1)] = l1_rel_error(tar, prd)
-                    # errors[4*index:4*(index+1)] = l1_rel_error(inp.cpu(), inp_og.cpu())
+                    errors_rand[4*index:4*(index+1)] = l1_rel_error(tar_rand.cpu(), prd_rand.cpu())
                     index+=1
 
                     valid_loss += loss.item() * inp.size(0)
@@ -406,7 +413,8 @@ def main(train=True, load_checkpoint=False, enable_amp=False):
             print(f'time taken: {epoch_time}')
             print(f'accumulated training loss: {acc_loss}')
             print(f'relative validation loss: {valid_loss}')
-            print(f'median relative error: {torch.median(errors).item()}')
+            print(f'median relative error over all points: {torch.median(errors).item()}')
+            print(f'median relative error over collocation poitns: {torch.median(errors_rand).item()}')
 
 
             if torch.median(errors).item() < minimum_median:

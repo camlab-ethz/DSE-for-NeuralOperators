@@ -173,8 +173,8 @@ class MakeSparse2D:
         self.number_points_x = number_points_x
         self.number_points_y = number_points_y
 
-    def random_points_on_sphere(self, n):
-        np.random.seed(0)
+    def random_points_on_sphere(self, n, seed=0):
+        np.random.seed(seed)
         # Generate random points in 3D space
         x = np.random.uniform(-1, 1, n)
         y = np.random.uniform(-1, 1, n)
@@ -220,9 +220,20 @@ class MakeSparse2D:
 
         return theta_index, phi_index, theta_angle.to(torch.float), phi_angle.to(torch.float)
 
-    def get_random_sphere_data(self, data, theta, phi):
-
+    def get_random_sphere_data(self, data, theta, phi, theta_, phi_):
         data_sparse = data[:,:,theta,phi]
+
+        # make torch tensors
+        # pdb.set_trace()
+        phi_torch = torch.tensor(phi, dtype=torch.float).cuda()
+        theta_torch = torch.tensor(theta, dtype=torch.float).cuda()
+
+        # reshape for concatentation with the data
+        phi_torch = phi_torch[None, None, :].repeat(4, 1, 1)
+        theta_torch = theta_torch[None, None, :].repeat(4, 1, 1)
+
+        # add the positions to the data point
+        data_sparse = torch.cat((data_sparse, phi_torch, theta_torch), 1)
 
         return  data_sparse
     
@@ -307,7 +318,7 @@ class SphericalVandermondeTransform():
         return data_inv
     
 class SphericalSpectralConv2d(nn.Module):
-    def __init__(self, in_channels, out_channels, modes1, transformer):
+    def __init__(self, in_channels, out_channels, modes1):
         super(SphericalSpectralConv2d, self).__init__()
 
         """
@@ -323,28 +334,28 @@ class SphericalSpectralConv2d(nn.Module):
         self.weights1 = nn.Parameter(self.scale * torch.rand(in_channels, out_channels, self.modes1**2, dtype=torch.float))
         # self.weights2 = nn.Parameter(self.scale * torch.rand(in_channels, out_channels, self.modes1, self.modes1, dtype=torch.cfloat))
 
-        self.transformer = transformer
 
     # Complex multiplication
     def compl_mul1d(self, input, weights):
         # (batch, in_channel, x ), (in_channel, out_channel, x) -> (batch, out_channel, x)
         return torch.einsum("bix,iox->box", input, weights)
 
-    def forward(self, x):
+    def forward(self, x, transformer):
         batchsize = x.shape[0]
         #Compute Fourier coeffcients up to factor of e^(- something constant)
-        x_ft = self.transformer.forward(x)
+        x_ft = transformer.forward(x)
 
         # Multiply relevant Fourier modes
         out_ft = self.compl_mul1d(x_ft, self.weights1)
 
         #Return to physical space
-        x = self.transformer.inverse(out_ft)
+        x = transformer.inverse(out_ft)
 
         return x
 
+
 class SFNO_SMM(nn.Module):
-    def __init__(self, modes1, width, transformer):
+    def __init__(self, modes1, width):
         super(SFNO_SMM, self).__init__()
 
         """
@@ -365,12 +376,12 @@ class SFNO_SMM(nn.Module):
         self.padding = 0 # pad the domain if input is non-periodic
         
         # input channel is 18: the solution of the previous 10 timesteps + 2 locations (u(t-10, x, y), ..., u(t-1, x, y),  x, y)
-        self.fc0 = nn.Linear(3, self.width)
-        self.conv0 = SphericalSpectralConv2d(self.width, self.width, self.modes1, transformer)
-        self.conv1 = SphericalSpectralConv2d(self.width, self.width, self.modes1, transformer)
-        self.conv2 = SphericalSpectralConv2d(self.width, self.width, self.modes1, transformer)
-        self.conv3 = SphericalSpectralConv2d(self.width, self.width, self.modes1, transformer)
-        self.conv4 = SphericalSpectralConv2d(self.width, self.width, self.modes1, transformer)
+        self.fc0 = nn.Linear(5, self.width)
+        self.conv0 = SphericalSpectralConv2d(self.width, self.width, self.modes1)
+        self.conv1 = SphericalSpectralConv2d(self.width, self.width, self.modes1)
+        self.conv2 = SphericalSpectralConv2d(self.width, self.width, self.modes1)
+        self.conv3 = SphericalSpectralConv2d(self.width, self.width, self.modes1)
+        self.conv4 = SphericalSpectralConv2d(self.width, self.width, self.modes1)
         self.w0 = nn.Conv1d(self.width, self.width, 1)
         self.w1 = nn.Conv1d(self.width, self.width, 1)
         self.w2 = nn.Conv1d(self.width, self.width, 1)
@@ -379,34 +390,34 @@ class SFNO_SMM(nn.Module):
         self.fc1 = nn.Linear(self.width, 128)
         self.fc2 = nn.Linear(128, 3)
 
-    def forward(self, x):
+    def forward(self, x, transformer):
         
         x = x.permute(0, 2, 1)
         x = self.fc0(x)
         x = x.permute(0, 2, 1)
         # x = F.pad(x, [0,self.padding, 0,self.padding]) # pad the domain if input is non-periodic
 
-        x1 = self.conv0(x)
+        x1 = self.conv0(x, transformer)
         x2 = self.w0(x)
         x = x1 + x2
         x = F.gelu(x)
 
-        x1 = self.conv1(x)
+        x1 = self.conv1(x, transformer)
         x2 = self.w1(x)
         x = x1 + x2
         x = F.gelu(x)
 
-        x1 = self.conv2(x)
+        x1 = self.conv2(x, transformer)
         x2 = self.w2(x)
         x = x1 + x2
         x = F.gelu(x)
 
-        x1 = self.conv3(x)
+        x1 = self.conv3(x, transformer)
         x2 = self.w3(x)
         x = x1 + x2
         x = F.gelu(x)
 
-        x1 = self.conv4(x)
+        x1 = self.conv4(x, transformer)
         x2 = self.w4(x)
         x = x1 + x2
         
@@ -452,11 +463,20 @@ def main(train=True, load_checkpoint=False, enable_amp=False):
 
 
     # training function
-    def train_SMM_model(model, dataloader, optimizer, gscaler, sparsify, theta, phi, scheduler=None, nepochs=20, nfuture=0, num_examples=256, num_valid=64, loss_fn='l1'):
-        minimum_median = 1000
+    def train_SMM_model(model, dataloader, modes, optimizer, gscaler, sparsify, scheduler=None, nepochs=20, nfuture=0, num_examples=256, num_valid=64, loss_fn='l1'):
+        minimum_median = 5.7
         train_start = time.time()
 
         for epoch in range(nepochs):
+
+
+            num_points = 10000 # yields about 5000 valid points
+            theta_index, phi_index, theta, phi = sparsify.random_points_on_sphere(num_points, seed = epoch)
+            transformer = SphericalVandermondeTransform(phi, theta, modes)
+
+            print(f"training distribution with {theta_index.shape} points")
+
+
 
             # time each epoch
             epoch_start = time.time()
@@ -472,12 +492,12 @@ def main(train=True, load_checkpoint=False, enable_amp=False):
                 # inp shape [batchsize, 3, 256, 512]
                 with amp.autocast(enabled=enable_amp):
 
-                    inp = sparsify.get_random_sphere_data(inp, theta, phi)
-                    tar = sparsify.get_random_sphere_data(tar, theta, phi)
+                    inp = sparsify.get_random_sphere_data(inp, theta_index, phi_index, theta, phi)
+                    tar = sparsify.get_random_sphere_data(tar, theta_index, phi_index, theta, phi)[:,:3,:]
 
-                    prd = model(inp)
+                    prd = model(inp, transformer)
                     for _ in range(nfuture):
-                        prd = model(prd)
+                        prd = model(prd, transformer)
 
                     if loss_fn == 'mse':
                         loss = mse_loss(prd, tar)
@@ -500,51 +520,64 @@ def main(train=True, load_checkpoint=False, enable_amp=False):
             dataloader.dataset.set_initial_condition('random')
             dataloader.dataset.set_num_examples(num_valid)
 
-            # perform validation
-            valid_loss = 0
-            model.eval()
-            errors = torch.zeros((num_valid))
-            index = 0
-            with torch.no_grad():
-                for inp, tar in dataloader:
 
-                    inp = sparsify.get_random_sphere_data(inp, theta, phi)
-                    tar = sparsify.get_random_sphere_data(tar, theta, phi)
+            # only perform the validation every 10 epochs to speed up the process a bit
+            if epoch % 1 == 0:
+                # perform validation
+                valid_loss = 0
+                model.eval()
+                errors = torch.zeros((num_valid))
+                index = 0
 
-                    prd = model(inp)
-                    for _ in range(nfuture):
-                        prd = model(prd)
+                num_points = 10000 # yields about 5000 valid points
+                theta_index, phi_index, theta, phi = sparsify.random_points_on_sphere(num_points, seed = epoch+1000)
+                transformer = SphericalVandermondeTransform(phi, theta, modes)
 
-                    if loss_fn == 'mse':
-                        loss = mse_loss(prd, tar)
-                    elif loss_fn == 'l1':
-                        loss = l1_loss(prd, tar)
-                    else:
-                        raise NotImplementedError(f'Unknown loss function {loss_fn}')
-                    errors[4*index:4*(index+1)] = l1_rel_error(tar, prd)
-                    index+=1
+                print(f"testing distribution with {theta_index.shape} points")
+
+                with torch.no_grad():
+                    for inp, tar in dataloader:
+
+                        inp = sparsify.get_random_sphere_data(inp, theta_index, phi_index, theta, phi)
+                        tar = sparsify.get_random_sphere_data(tar, theta_index, phi_index, theta, phi)[:,:3,:]
+
+                        prd = model(inp, transformer)
+                        for _ in range(nfuture):
+                            prd = model(prd, transformer)
+
+                        if loss_fn == 'mse':
+                            loss = mse_loss(prd, tar)
+                        elif loss_fn == 'l1':
+                            loss = l1_loss(prd, tar)
+                        else:
+                            raise NotImplementedError(f'Unknown loss function {loss_fn}')
+                        errors[4*index:4*(index+1)] = l1_rel_error(tar, prd)
+                        index+=1
 
 
 
-                    valid_loss += loss.item() * inp.size(0)
+                        valid_loss += loss.item() * inp.size(0)
 
 
-            valid_loss = valid_loss / len(dataloader.dataset)
+                valid_loss = valid_loss / len(dataloader.dataset)
 
-            if scheduler is not None:
-                scheduler.step(valid_loss)
+                if scheduler is not None:
+                    scheduler.step(valid_loss)
 
 
-            print(f'--------------------------------------------------------------------------------')
-            print(f'Epoch {epoch} summary:')
-            print(f'time taken: {epoch_time}')
-            print(f'accumulated training loss: {acc_loss}')
-            print(f'relative validation loss: {valid_loss}')
-            print(f'median relative error: {torch.median(errors).item()}')
+                print(f'--------------------------------------------------------------------------------')
+                print(f'Epoch {epoch} summary:')
+                print(f'time taken: {epoch_time}')
+                print(f'accumulated training loss: {acc_loss}')
+                print(f'relative validation loss: {valid_loss}')
+                print(f'median relative error: {torch.median(errors).item()}')
 
-            if torch.median(errors).item() < minimum_median:
-                minimum_median = torch.median(errors).item()
-                print(f'*** new minimum median: {torch.median(errors).item()}')
+                if torch.median(errors).item() < minimum_median:
+                    minimum_median = torch.median(errors).item()
+                    print(f'*** new minimum median: {torch.median(errors).item()}')
+
+                    # save the model
+                    torch.save(model, "../_Models/fno_smm_extension_model.pt")
 
             # if wandb.run is not None:
             #     current_lr = optimizer.param_groups[0]['lr']
@@ -557,6 +590,45 @@ def main(train=True, load_checkpoint=False, enable_amp=False):
         print(f'done. Training took {train_time}.')
         print(f' minimum median: {minimum_median}')
         return valid_loss
+
+
+    # evaluation function
+    def eval_SMM_model(model, dataloader, transformer, optimizer, gscaler, sparsify, theta, phi, theta_, phi_, scheduler=None, nepochs=20, nfuture=0, num_examples=256, num_valid=64, loss_fn='l1'):
+        # perform validation
+        valid_loss = 0
+        model.eval()
+        errors = torch.zeros((num_valid))
+        index = 0
+
+        dataloader.dataset.set_initial_condition('random')
+        dataloader.dataset.set_num_examples(num_valid)
+
+        with torch.no_grad():
+            for inp, tar in dataloader:
+                inp = sparsify.get_random_sphere_data(inp, theta, phi, theta_, phi_)
+                tar = sparsify.get_random_sphere_data(tar, theta, phi, theta_, phi_)[:,:3,:]
+                prd = model(inp, transformer)
+                for _ in range(nfuture):
+                    prd = model(prd, transformer)
+                if loss_fn == 'mse':
+                    loss = mse_loss(prd, tar)
+                elif loss_fn == 'l1':
+                    loss = l1_loss(prd, tar)
+                else:
+                    raise NotImplementedError(f'Unknown loss function {loss_fn}')
+                errors[4*index:4*(index+1)] = l1_rel_error(tar, prd)
+                index+=1
+                valid_loss += loss.item() * inp.size(0)
+        valid_loss = valid_loss / len(dataloader.dataset)
+        if scheduler is not None:
+            scheduler.step(valid_loss)
+        # print(f'--------------------------------------------------------------------------------')
+        print(f'relative validation loss: {valid_loss}')
+        print(f'median relative error: {torch.median(errors).item()}')
+        print(f'variance: {torch.var(errors).item()}')
+        # print(f'mean: {2 * torch.mean(errors).item()}')
+        return valid_loss
+
 
 
     # rolls out the FNO and compares to the classical solver
@@ -623,23 +695,41 @@ def main(train=True, load_checkpoint=False, enable_amp=False):
 
 
     # SMM method
+
     sparsify = MakeSparse2D(nlon, nlat)
-    num_points = 10000 # yields about 5000 valid points
-    theta_index, phi_index, theta, phi = sparsify.random_points_on_sphere(num_points)
     modes = 22
     width = 128
-    transform = SphericalVandermondeTransform(phi, theta, modes)
-    model = SFNO_SMM(modes, width, transform).to(device)
+    model = SFNO_SMM(modes, width).to(device)
+    model = torch.load( "../_Models/fno_smm_extension_model.pt")
     num_params = count_parameters(model)
     print(f'number of trainable params: {num_params}')
-
     optimizer = torch.optim.Adam(model.parameters(), lr=1E-3)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
-    gscaler = amp.GradScaler(enabled=enable_amp)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', verbose=True)
 
+    # optimizer = torch.optim.Adam(model.parameters(), lr=5E-3)
+    # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.97)
+
+    gscaler = amp.GradScaler(enabled=enable_amp)
     start_time = time.time()
 
-    train_SMM_model(model, dataloader, optimizer, gscaler, sparsify, theta_index, phi_index, scheduler, nepochs=200, loss_fn='l1')
+
+
+    # train_SMM_model(model, dataloader, modes, optimizer, gscaler, sparsify, scheduler, nepochs=200, loss_fn='l1')
+    print(f'--------------------------------------------------------------------------------')
+    print(f'--------------------------------------------------------------------------------')
+
+
+    for power in range(8):
+        num_points = 2**power * 1000
+
+        # Generate a new ditribution and observe the performance of the model
+        print(f'--------------------------------------------------------------------------------')
+        print(f'--------------------------------------------------------------------------------')
+        theta_index, phi_index, theta, phi = sparsify.random_points_on_sphere(num_points, seed = 100000+power)
+        print(f"distribution with {theta_index.shape} points")
+        transformer = SphericalVandermondeTransform(phi, theta, modes)
+        
+        eval_SMM_model(model, dataloader, transformer, optimizer, gscaler, sparsify, theta_index, phi_index, theta, phi, scheduler, nepochs=1, loss_fn='l1')
 
 
 if __name__ == "__main__":
