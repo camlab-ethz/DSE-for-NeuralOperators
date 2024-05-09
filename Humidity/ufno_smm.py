@@ -6,10 +6,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-from .fno_dse import SpectralConv2d_SMM, VandermondeTransform
+from .fno_dse import SpectralConv2d_dse, VandermondeTransform
 
 ################################################################
-# UFNO_SMM (SpectralConv2d same as FNO)
+# UFNO_dse (SpectralConv2d same as FNO)
 ################################################################
 
 # the 2D U-Net
@@ -66,7 +66,7 @@ class U_net(nn.Module):
                          stride=stride, padding=padding)
 
 
-class UFNO_SMM(nn.Module):
+class UFNO_dse(nn.Module):
     # Set a class attribute for the default configs.
     configs = {
         'num_train':            18*50,
@@ -96,7 +96,7 @@ class UFNO_SMM(nn.Module):
         'growth':           2.0,                        # Growth rate of the nonuniform sampling region
     }
     def __init__(self, configs):
-        super(UFNO_SMM, self).__init__()
+        super(UFNO_dse, self).__init__()
 
         self.modes1 = configs['modes1']
         self.modes2 = configs['modes2']
@@ -109,10 +109,10 @@ class UFNO_SMM(nn.Module):
         transform = VandermondeTransform(self.sparse_x, self.sparse_y, self.modes1, self.modes2, configs['device'])
 
         self.fc0 = nn.Linear(18, self.width)
-        self.conv0 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2, transform)
-        self.conv1 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2, transform)
-        self.conv2 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2, transform)
-        self.conv3 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2, transform)
+        self.conv0 = SpectralConv2d_dse(self.width, self.width, self.modes1, self.modes2, transform)
+        self.conv1 = SpectralConv2d_dse(self.width, self.width, self.modes1, self.modes2, transform)
+        self.conv2 = SpectralConv2d_dse(self.width, self.width, self.modes1, self.modes2, transform)
+        self.conv3 = SpectralConv2d_dse(self.width, self.width, self.modes1, self.modes2, transform)
         self.w0 = nn.Conv2d(self.width, self.width, 1)
         self.w1 = nn.Conv2d(self.width, self.width, 1)
         self.w2 = nn.Conv2d(self.width, self.width, 1)

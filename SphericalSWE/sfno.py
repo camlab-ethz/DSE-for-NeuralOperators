@@ -410,7 +410,7 @@ def main(train=True, load_checkpoint=False, enable_amp=False):
             if torch.median(errors).item() < minimum_median:
                 minimum_median = torch.median(errors).item()
                 print(f'*** new minimum median: {torch.median(errors).item()}')
-                # torch.save(model, f"../../SMM_models/swe/sfno_swe")
+                # torch.save(model, f"../../dse_models/swe/sfno_swe")
 
             # if wandb.run is not None:
             #     current_lr = optimizer.param_groups[0]['lr']

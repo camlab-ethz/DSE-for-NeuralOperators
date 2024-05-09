@@ -44,9 +44,9 @@ class VFT:
         return data_inv
     
 
-class SpectralConv2d_SMM (nn.Module):
+class SpectralConv2d_dse (nn.Module):
     def __init__(self, in_channels, out_channels, modes1, modes2):
-        super(SpectralConv2d_SMM, self).__init__()
+        super(SpectralConv2d_dse, self).__init__()
 
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -91,7 +91,7 @@ class SpectralConv2d_SMM (nn.Module):
         return x.real
 
 
-class FNO_SMM (nn.Module):
+class FNO_dse (nn.Module):
     # Set a class attribute for the default configs.
     configs = {
         'num_train':            1000,
@@ -115,7 +115,7 @@ class FNO_SMM (nn.Module):
         'width':                32,                     # Number of channels in the convolutional layers
     }
     def __init__(self, configs):
-        super(FNO_SMM, self).__init__()
+        super(FNO_dse, self).__init__()
 
         self.modes1 = configs['modes1']
         self.modes2 = configs['modes2']
@@ -129,10 +129,10 @@ class FNO_SMM (nn.Module):
         self.fc0 = nn.Linear(2, self.width)
         # input channel is 12: the solution of the previous 10 timesteps + 2 locations (u(t-10, x, y), ..., u(t-1, x, y),  x, y)
 
-        self.conv0 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2)
-        self.conv1 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2)
-        self.conv2 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2)
-        self.conv3 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2)
+        self.conv0 = SpectralConv2d_dse(self.width, self.width, self.modes1, self.modes2)
+        self.conv1 = SpectralConv2d_dse(self.width, self.width, self.modes1, self.modes2)
+        self.conv2 = SpectralConv2d_dse(self.width, self.width, self.modes1, self.modes2)
+        self.conv3 = SpectralConv2d_dse(self.width, self.width, self.modes1, self.modes2)
         self.w0 = nn.Conv1d(self.width, self.width, 1)
         self.w1 = nn.Conv1d(self.width, self.width, 1)
         self.w2 = nn.Conv1d(self.width, self.width, 1)

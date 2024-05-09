@@ -31,7 +31,7 @@
 
 '''
 This code is provided by torch-harmonics. 
-It is modified to run the SMM method using spherical harmonics.
+It is modified to run the dse method using spherical harmonics.
 '''
 import os
 import time
@@ -343,9 +343,9 @@ class SphericalSpectralConv2d(nn.Module):
 
         return x
 
-class SFNO_SMM(nn.Module):
+class SFNO_dse(nn.Module):
     def __init__(self, modes1, width, transformer):
-        super(SFNO_SMM, self).__init__()
+        super(SFNO_dse, self).__init__()
 
         """
         The overall network. It contains 4 layers of the Fourier layer.
@@ -452,7 +452,7 @@ def main(train=True, load_checkpoint=False, enable_amp=False):
 
 
     # training function
-    def train_SMM_model(model, dataloader, optimizer, gscaler, sparsify, theta, phi, scheduler=None, nepochs=20, nfuture=0, num_examples=256, num_valid=64, loss_fn='l1'):
+    def train_dse_model(model, dataloader, optimizer, gscaler, sparsify, theta, phi, scheduler=None, nepochs=20, nfuture=0, num_examples=256, num_valid=64, loss_fn='l1'):
         minimum_median = 1000
         train_start = time.time()
 
@@ -622,14 +622,14 @@ def main(train=True, load_checkpoint=False, enable_amp=False):
         return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
-    # SMM method
+    # dse method
     sparsify = MakeSparse2D(nlon, nlat)
     num_points = 10000 # yields about 5000 valid points
     theta_index, phi_index, theta, phi = sparsify.random_points_on_sphere(num_points)
     modes = 22
     width = 128
     transform = SphericalVandermondeTransform(phi, theta, modes)
-    model = SFNO_SMM(modes, width, transform).to(device)
+    model = SFNO_dse(modes, width, transform).to(device)
     num_params = count_parameters(model)
     print(f'number of trainable params: {num_params}')
 
@@ -639,7 +639,7 @@ def main(train=True, load_checkpoint=False, enable_amp=False):
 
     start_time = time.time()
 
-    train_SMM_model(model, dataloader, optimizer, gscaler, sparsify, theta_index, phi_index, scheduler, nepochs=200, loss_fn='l1')
+    train_dse_model(model, dataloader, optimizer, gscaler, sparsify, theta_index, phi_index, scheduler, nepochs=200, loss_fn='l1')
 
 
 if __name__ == "__main__":

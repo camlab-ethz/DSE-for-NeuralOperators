@@ -108,11 +108,11 @@ def train (configs):
 
         ### Structured Matrix Method
         elif configs['model'].lower() == 'fno_dse':
-            Model = importlib.import_module(configs['experiment']+'.architectures').FNO_SMM
+            Model = importlib.import_module(configs['experiment']+'.architectures').FNO_dse
         elif configs['model'].lower() == 'ffno_dse':
-            Model = importlib.import_module(configs['experiment']+'.architectures').FFNO_SMM
+            Model = importlib.import_module(configs['experiment']+'.architectures').FFNO_dse
         elif configs['model'].lower() == 'ufno_dse':
-            Model = importlib.import_module(configs['experiment']+'.architectures').UFNO_SMM
+            Model = importlib.import_module(configs['experiment']+'.architectures').UFNO_dse
 
         else:
             raise ValueError('Model not recognized.')

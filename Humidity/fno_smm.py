@@ -8,7 +8,7 @@ import torch.nn.functional as F
 
 
 ################################################################
-# FNO_SMM (VandermondeTransform, SpectralConv2d_SMM same as ShearLayer)
+# FNO_dse (VandermondeTransform, SpectralConv2d_dse same as ShearLayer)
 ################################################################
 
 # class for 2-dimensional Fourier transforms on a nonequispaced lattice of data
@@ -112,9 +112,9 @@ class VandermondeTransform:
         return data_inv
 
 
-class SpectralConv2d_SMM (nn.Module):
+class SpectralConv2d_dse (nn.Module):
     def __init__(self, in_channels, out_channels, modes1, modes2, transformer):
-        super(SpectralConv2d_SMM, self).__init__()
+        super(SpectralConv2d_dse, self).__init__()
 
         self.in_channels = in_channels
         self.out_channels = out_channels
@@ -149,7 +149,7 @@ class SpectralConv2d_SMM (nn.Module):
         return x
     
 
-class FNO_SMM (nn.Module):
+class FNO_dse (nn.Module):
     # Set a class attribute for the default configs.
     configs = {
         'num_train':            18*50,
@@ -179,7 +179,7 @@ class FNO_SMM (nn.Module):
         'growth':           2.0,                        # Growth rate of the nonuniform sampling region
     }
     def __init__(self, configs):
-        super(FNO_SMM, self).__init__()
+        super(FNO_dse, self).__init__()
 
         self.modes1 = configs['modes1']
         self.modes2 = configs['modes2']
@@ -191,10 +191,10 @@ class FNO_SMM (nn.Module):
         transform = VandermondeTransform(self.sparse_x, self.sparse_y, self.modes1, self.modes2, configs['device'])
         
         self.fc0 = nn.Linear(18, self.width)
-        self.conv0 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2, transform)
-        self.conv1 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2, transform)
-        self.conv2 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2, transform)
-        self.conv3 = SpectralConv2d_SMM(self.width, self.width, self.modes1, self.modes2, transform)
+        self.conv0 = SpectralConv2d_dse(self.width, self.width, self.modes1, self.modes2, transform)
+        self.conv1 = SpectralConv2d_dse(self.width, self.width, self.modes1, self.modes2, transform)
+        self.conv2 = SpectralConv2d_dse(self.width, self.width, self.modes1, self.modes2, transform)
+        self.conv3 = SpectralConv2d_dse(self.width, self.width, self.modes1, self.modes2, transform)
         self.w0 = nn.Conv2d(self.width, self.width, 1)
         self.w1 = nn.Conv2d(self.width, self.width, 1)
         self.w2 = nn.Conv2d(self.width, self.width, 1)

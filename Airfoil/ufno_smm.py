@@ -9,7 +9,7 @@ import numpy as np
 
 
 ################################################################
-# FFNO_SMM (UVFT, SpectralConv2d_last, SpectralConv2d, UNet same as Elasticity)
+# FFNO_dse (UVFT, SpectralConv2d_last, SpectralConv2d, UNet same as Elasticity)
 # BUT NOTE: SpectralConv2d_first is different
 ################################################################
 
@@ -227,7 +227,7 @@ class U_net (nn.Module):
                          stride=stride, padding=padding)
 
 
-class UFNO_SMM (nn.Module):
+class UFNO_dse (nn.Module):
     # Set a class attribute for the default configs.
     configs = {
         'num_train':            1500,
@@ -252,7 +252,7 @@ class UFNO_SMM (nn.Module):
         'width':                32,                     # Number of channels in the convolutional layers
     }
     def __init__(self, configs):
-        super(UFNO_SMM, self).__init__()
+        super(UFNO_dse, self).__init__()
 
         self.modes1 = configs['modes1']
         self.modes2 = configs['modes2']

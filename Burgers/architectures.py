@@ -29,7 +29,7 @@ class SpectralConv1d (nn.Module):
 
     def forward(self, x):
         if self.transform is not None:
-            # FNO SMM
+            # FNO dse
             x_ft = self.transform.forward(x.cfloat())
             out_ft = self.compl_mul1d(x_ft, self.weights)
             x = self.transform.inverse(out_ft).real / x.size(-1) * 2
@@ -176,7 +176,7 @@ class VandermondeTransform:
         return torch.matmul(data, self.Vc)
 
 
-class FNO_SMM (nn.Module):
+class FNO_dse (nn.Module):
     """
     The overall network. It contains 4 layers of the Fourier layer.
     1. Lift the input to the desire channel dimension by self.fc0 .
@@ -214,7 +214,7 @@ class FNO_SMM (nn.Module):
     }
 
     def __init__(self, configs):
-        super(FNO_SMM, self).__init__()
+        super(FNO_dse, self).__init__()
 
         self.modes = configs['modes']
         self.width = configs['width']
