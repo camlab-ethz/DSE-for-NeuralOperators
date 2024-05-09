@@ -10,7 +10,7 @@ import numpy as np
 # Default Configs
 ################################################################
 configs = {
-    'model':                'geo_ufno',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
+    'model':                'geo_ufno',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_dse, ffno_dse, ufno_dse
     'experiment':           'Elasticity',               # Burgers, Elasticity, Airfoil, ShearLayer, Humidity
     'device':               torch.device('cuda'),       # Define device for training & inference - GPU/CPU
 

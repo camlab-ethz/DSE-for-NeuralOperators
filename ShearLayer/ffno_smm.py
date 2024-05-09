@@ -5,7 +5,7 @@ import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 
-from .fno_smm import VandermondeTransform
+from .fno_dse import VandermondeTransform
 
 ################################################################
 # FFNO_SMM (VandermondeTransform same as FNO_SMM)

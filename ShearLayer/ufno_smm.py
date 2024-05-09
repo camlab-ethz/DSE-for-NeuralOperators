@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-from .fno_smm import SpectralConv2d_SMM, VandermondeTransform
+from .fno_dse import SpectralConv2d_SMM, VandermondeTransform
 
 ################################################################
 # UFNO_SMM (SpectralConv2d same as FNO)

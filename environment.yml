@@ -1,4 +1,4 @@
-name: smm
+name: dse
 channels:
   - pytorch
   - nvidia

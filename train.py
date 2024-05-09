@@ -19,7 +19,7 @@ from _Utilities.utilities import count_params, percentage_difference
 # configs
 ################################################################
 configs = {
-    'model':                'fno_dse',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_smm, ffno_smm, ufno_smm
+    'model':                'fno_dse',                 # Model to train - fno, ffno, ufno, geo_fno, geo_ffno, geo_ufno, fno_dse, ffno_dse, ufno_dse
     'experiment':           'Airfoil',               # Burgers, Elasticity, Airfoil, ShearLayer, Humidity
     'device':               torch.device('cuda'),       # Define device for training & inference - GPU/CPU
 
@@ -107,11 +107,11 @@ def train (configs):
             Model = importlib.import_module(configs['experiment']+'.architectures').Geo_UFNO
 
         ### Structured Matrix Method
-        elif configs['model'].lower() == 'fno_smm':
+        elif configs['model'].lower() == 'fno_dse':
             Model = importlib.import_module(configs['experiment']+'.architectures').FNO_SMM
-        elif configs['model'].lower() == 'ffno_smm':
+        elif configs['model'].lower() == 'ffno_dse':
             Model = importlib.import_module(configs['experiment']+'.architectures').FFNO_SMM
-        elif configs['model'].lower() == 'ufno_smm':
+        elif configs['model'].lower() == 'ufno_dse':
             Model = importlib.import_module(configs['experiment']+'.architectures').UFNO_SMM
 
         else:
@@ -316,8 +316,8 @@ if __name__=='__main__':
     train(configs)
 
     # Run training for multiple models: TODO figure out bug with copying parameters
-    # models = ['geo_fno', 'geo_ffno', 'geo_ufno', 'fno_smm', 'ffno_smm', 'ufno_smm']
-    # models = ['ffno_smm']
+    # models = ['geo_fno', 'geo_ffno', 'geo_ufno', 'fno_dse', 'ffno_dse', 'ufno_dse']
+    # models = ['ffno_dse']
     # for model in models:
         # new_configs = configs
         # new_configs['model'] = model

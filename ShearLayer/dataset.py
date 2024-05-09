@@ -34,7 +34,7 @@ def getDataloaders (configs):
     
     # create the needed distribution, x and y positions
     sparsify = MakeSparse2D(train_a.shape[2], train_a.shape[1])
-    if 'smm' in configs['model']:
+    if 'dse' in configs['model']:
         train_a, sparse_x = sparsify.shear_distribution(train_a, center_points, growth, uniform)
         train_u = sparsify.shear_distribution(train_u, center_points, growth, uniform)[0]
         test_a = sparsify.shear_distribution(test_a, center_points, growth, uniform)[0]
