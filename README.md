@@ -1,6 +1,6 @@
 # Discrete Spectral Evaluations for Neural Operators
 
-This is a collaborative work between the ETH Computational Applied Mathemitics Lab and the ETH Soft Robotics Lab.
+This is a collaborative work between the ETH Computational Applied Mathematics Lab and the ETH Soft Robotics Lab.
 
 ## Python Anaconda Environment
 
